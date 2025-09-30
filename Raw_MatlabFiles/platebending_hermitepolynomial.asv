@@ -1,0 +1,395 @@
+
+%%%%% __________ BENDING OF THIN_PLATES PROBLEM__________________________%%%%
+% where w = w1N1 + w2N2 +....+ w12N12
+%isoparametric form
+%% Properties of the plate 
+% Inputs:
+E = 200e9;                      % Young's modulus (Pa)
+h = 0.025;                     %  Thickness of the plate in m
+rho = 8050;                     % density of the plate material(kg/m3)
+q= -150000;                           % Transvere (perpendicular) distributed force over domain (N/m2)
+nu = 0.3;                       % poisons ratio
+le = 1;                         % elemental length 
+D = (E*h^3 / (12*(1 - nu^2))) * [1, nu, 0;
+                                 nu, 1, 0;
+                                 0, 0, (1 - nu)/2];
+% put Transverse applied load( in N)
+% right edge ; % left edge
+Vx =5000 ;      Vy =12500;
+% May change according to condition
+Nelem = 24;                           % Total no of elements
+Nnode = 35; % if linear*(Nelem+1);                % Total no of nodes 
+Ndof = 3*Nnode;                     %Total no. of Dofs  ( Kirchoff's law)                
+% Nodal coordinates for Q4 element (CCW way)
+coords = [0  0;   % Node 1
+          0.5  0;   % Node 2
+          1  0;   % Node 3
+          1.5  0;   % Node 4
+          2   0;   % Node 5
+          2.5  0;
+          3   0;
+          0   0.5;   % Node 6
+          0.5   0.5;   % Node 7
+          1   0.5;   % Node 8
+          1.5   0.5;
+          2  0.5;
+          2.5  0.5;
+          3  0.5;
+          0  1;   % Node 6
+          0.5  1;   % Node 7
+          1   1;   % Node 8
+          1.5   1;
+          2  1;
+          2.5  1;
+          3  1;
+          0  1.5;
+          0.5   1.5;   % Node 6
+          1   1.5;
+          1.5  1.5;
+          2  1.5;
+          2.5 1.5;
+          3  1.5;
+          0   2;   % Node 6
+          0.5   2;   % Node 7
+          1   2;   % Node 8
+          1.5   2;
+          2  2;
+          2.5 2;
+          3   2];  % Node 9
+    
+%% Connectivity of one element: which nodes form it
+% For Q4, each element connects 4 nodes **Always IN CCW MANNER
+    c = [1 2  9 8;
+        2 3 10 9 ;
+        3 4 11 10;
+        4 5 12 11;
+        5 6  13 12;
+        6 7 14 13;
+        8 9 16 15;
+        9 10 17 16;
+        10 11 18 17;
+        11 12 19 18;
+        12 13 20 19;
+        13 14 21 20;
+        15 16 23 22;
+        16 17  24 23;
+        17 18 25 24;
+        18 19 26 25;
+        19 20 27 26;
+        20 21 28 27;
+        22 23 30 29;
+        23 24 31 30;
+        24 25 32 31;
+        25 26 33 32;
+        26 27 34 33;
+        27 28 35 34];
+
+%# Gauss points(2D) and weights for 2x2 integration
+gp = [-1/sqrt(3) ,1/sqrt(3)];
+w= [1 , 1];
+
+%% Initialize the matrix
+Kg = zeros(Ndof, Ndof);
+Mg = zeros(Ndof, Ndof);
+Fg = zeros(Ndof,1); 
+
+%%%%%% ********    % SHAPE FUNCTION & ITS DERIVATIVES %%%%%%%%%%
+syms xi eta real 
+           % 1D Hermite shape functions (cubic), defined over [-1, 1]
+        H1 = 1 - 3*xi^2 + 2*xi^3;           % Displacement at node i
+        H2 = le*(xi - 2*xi^2 + xi^3);        % Slope at node i
+        H3 = 3*xi^2 - 2*xi^3;               % Displacement at node j
+        H4 = le*(-xi^2 + xi^3);              % Slope at node j
+
+        H_xi  = [H1; H2; H3; H4];   % Functions in xi direction
+        %H = [H1; H4; H3; H2];
+        H_eta = subs(H_xi, xi, eta);        % Functions in eta direction
+
+        %% Shape Function (Neglecting Shear)
+            N1  = H_xi(1) * H_eta(1);  % w at Node 1
+            N2  = H_xi(2) * H_eta(1);  % θx at Node 1
+            N3  = H_xi(1) * H_eta(2);  % θy at Node 1
+            N4  = H_xi(3) * H_eta(1);  % w at Node 2
+            N5  = H_xi(4) * H_eta(1);  % θx at Node 2
+            N6  = H_xi(3) * H_eta(2);  % θy at Node 2
+            N7  = H_xi(3) * H_eta(3);  % w at Node 3
+            N8  = H_xi(4) * H_eta(3);  % θx at Node 3
+            N9  = H_xi(3) * H_eta(4);  % θy at Node 3
+            N10  = H_xi(1) * H_eta(3);  % w at Node 4
+            N11  = H_xi(2) * H_eta(3);  % θx at Node 4
+            N12  = H_xi(1) * H_eta(4);  % θy at Node 4
+
+    %SHAPE FUNCTION IN MATRIX FORM
+    N=[N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12];
+    
+    %% Compute 1st Derivatives of N w.r.t. xi and eta
+    N_xi  = simplify(diff(N, xi));       % ∂N/∂xi
+    N_eta = simplify(diff(N, eta));     % ∂N/∂eta
+    dN_dxi =[ N_xi;
+              N_eta];
+    %% Compute 2nd Derivatives of N w.r.t. xi and eta
+
+    N_xixi  = simplify(diff(N, xi, 2));       % ∂²N/∂xi²
+    N_etaeta = simplify(diff(N, eta, 2));     % ∂²N/∂eta²
+    N_xieta = simplify(diff(diff(N, xi), eta)); % ∂²N/∂xi∂eta
+
+%% Computation (HAVE TO LOOK IN THIS PART ))
+for e = 1:Nelem
+    nodes = c(e,:);
+    XY = coords(nodes,:); % takes the 4 coordinares of perticular element
+    % Derivatives w.r.t. xi and eta
+    dN_dxi = zeros(2,12);
+    %local stiffness matrix initialization within a element
+    Ke = zeros(12,12);
+    Me = zeros(12,12);
+    Fe = zeros(12,1);
+    for i = 1:2
+        for j = 1:2
+            xi_val = gp(i);
+            eta_val = gp(j);
+            wts = w(i) * w(j);
+
+            % Symbolic substitution of xi and eta
+            N_val = double(subs(N, [xi, eta], [xi_val, eta_val]));
+            N_xixi_val = double(subs(N_xixi, [xi, eta], [xi_val, eta_val]));
+            N_etaeta_val = double(subs(N_etaeta, [xi, eta], [xi_val, eta_val]));
+            N_xieta_val = double(subs(N_xieta, [xi, eta], [xi_val, eta_val]));
+           %%%%%% *************Jacobian it may change per one mapping and element wise
+           % FOR linear map xi--x & eta--y
+           J = [2/le 0;
+                0  2/le];
+           %% J = dN_dxi* XY;     %           
+            detJ = det(J);                     % Jacobian determinant
+            %dN_dx = inv(J)*dN_dxi;              %basically dN_dx = [dN/dx, dN/dy] matrix
+
+            % ---- Calculating B MAtrix  ----
+            B = zeros(3, 12);
+            % %*** Will use in case of nonlinear mapping
+            % V =zeros(5, 12);
+            %  % assignning the B matrix change according to element
+            %        V = [ N_xixi;
+            %            N_etaeta;
+            %            N_xieta;
+            %            N_xi;
+            %            N_eta];
+            % 
+
+                 B =  (4/le^2)*[ N_xixi_val;    % [d2N1/dx2   d2N2/dx2 ..... d2Nn/dx2 
+                                 N_etaeta_val;  %  d2N1/dy2   d2N2/dy2 ..... d2Nn/dy2 
+                                2*N_xieta_val];  %  d2N1/dxdy  d2N2/dxdy ..... d2Nn/dxdy]
+
+            % Assigning the values into elemental local matrix
+            Ke = Ke + B' * D * B * detJ * wts;  %% though For linear mapping le not going to affect the ke 
+            Me = Me + ((rho*h)*(detJ*wts))*(N_val')*N_val;
+            % Calculating global force vector
+            Fe = Fe +  q*detJ*wts*(N_val')  ;
+        end
+       %Fe = Fe +  q*detJ*wts*N_val'  ;
+    end
+
+    %%%% ***Put into the logic for finding global k
+    dofs = reshape([3*nodes-2; 3*nodes-1; 3*nodes],1,[]);
+    % Global matrix is properly shaped before adding ke in required position
+    % Add to global stiffness matrix
+    Kg(dofs,dofs) = Kg(dofs,dofs) + Ke; %% **reshape funcn
+    Mg(dofs,dofs) = Mg(dofs,dofs) + Me;
+    % Global force vector computing ****
+    Fg(dofs,1) = Fg(dofs,1) + Fe;
+end
+
+
+%% Boundary conditions:
+% ****put varrious combination****
+%  nodal dof ( w , dw/dx and dw/dy ) for each of the element
+fixedDOF = [1  2  3   4 5 6  7 8 9 10 11 12  13 14 15 16 17 18 19 20 21 22 23 24   40 41 42 43 44 45  61 62 63 64 65 66  82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99  100 101 102 103 104 105   ];    % Left & side clammed                                %---(% Write what is the boundary condn)--
+freeDOF = setdiff(1:Ndof, fixedDOF); % setdiff remove all the fixed nodes from the dof vector
+
+% Apply boundary 
+Kf = Kg(freeDOF, freeDOF); %%fianl stiffness matrix
+Mf = Mg(freeDOF, freeDOF); %%fianl Mass-coeff matrix
+%   assign the load after understanding ## use the reshape to get the
+%   reshape the Fg then assign the external load
+Ff = Fg(freeDOF) ;%+[0;0;0;0;0;0] ;
+
+%% ---- Solving the system ----
+%calculation of the deflection and slopes
+U = zeros(Ndof, 1);
+U(freeDOF) = Kf \ Ff;
+
+% for finding the force
+F_f= Kg*U  ; %final force vector 
+
+
+%% Calculating eig values  ------
+    % Solve eigenvalue problem
+[phi, omega2] = eig(Kf, Mf);
+
+    % Natural frequencies (Hz)
+omega = sqrt(diag(omega2));       % rad/s
+freq = omega / (2*pi);             % Hz
+
+    % Sorting frequencies
+[freq_sorted, idx_sort] = sort(freq);
+phi = phi(:, idx_sort);
+
+% Display first few natural frequencies
+disp('First few natural frequencies (Hz):');
+disp(freq_sorted(1:5));
+
+
+
+
+%%   ==== 3D DEFORMATION PLOT OF PLATE ====
+% Extract nodal deflection (w only from 12 DOFs per element)
+W = U(1:3:end);   % Every 3rd DOF corresponds to w
+
+% Get X, Y coordinates
+X = coords(:,1);
+Y = coords(:,2);
+
+% Triangulate the mesh for surface plotting (works for Q4 grid)
+tri = delaunay(X, Y);
+
+% Plot
+figure;
+trisurf(tri, X, Y, W, 'FaceColor','interp','EdgeColor','none');
+xlabel('X [m]');
+ylabel('Y [m]');
+zlabel('Deflection w [m]');
+title('Deformation of Plate (Kirchhoff FEM)');
+colorbar;
+view([-45 25]);      % Adjust angle for better 3D view
+axis equal tight;
+camlight headlight; lighting gouraud; % Enhances shading for 3D effect
+%% 2d subplot
+% ==== Extract DOFs ====
+w_vals  = U(1:3:end);    % vertical deflection
+tx_vals = U(2:3:end);    % slope along x (theta_x)
+ty_vals = U(3:3:end);    % slope along y (theta_y)
+
+X = coords(:,1);
+Y = coords(:,2);
+
+% ==== Midline in X-direction (y = mid-height) ====
+y_mid = mean(unique(Y));
+tol = 1e-5;
+x_line_idx = find(abs(Y - y_mid) < tol);
+[X_xline, sortX] = sort(X(x_line_idx));
+w_xline = w_vals(x_line_idx(sortX));
+tx_xline = tx_vals(x_line_idx(sortX));
+ty_xline = ty_vals(x_line_idx(sortX));
+
+% ==== Midline in Y-direction (x = mid-width) ====
+x_mid = mean(unique(X));
+y_line_idx = find(abs(X - x_mid) < tol);
+[Y_yline, sortY] = sort(Y(y_line_idx));
+w_yline = w_vals(y_line_idx(sortY));
+tx_yline = tx_vals(y_line_idx(sortY));
+ty_yline = ty_vals(y_line_idx(sortY));
+
+% ==== Plot Variation Along X ====
+figure;
+subplot(3,1,1)
+plot(X_xline, w_xline, '-o','LineWidth',1.5);
+ylabel('Deflection w [m]'); title('Variation Along x-direction (y = mid)');
+grid on;
+
+subplot(3,1,2)
+plot(X_xline, tx_xline, '-o','LineWidth',1.5);
+ylabel('\theta_x [rad]');
+grid on;
+
+subplot(3,1,3)
+plot(X_xline, ty_xline, '-o','LineWidth',1.5);
+ylabel('\theta_y [rad]'); xlabel('x [m]');
+grid on;
+
+% ==== Plot Variation Along Y ====
+figure;
+subplot(3,1,1)
+plot(Y_yline, w_yline, '-o','LineWidth',1.5);
+ylabel('Deflection w [m]'); title('Variation Along y-direction (x = mid)');
+grid on;
+
+subplot(3,1,2)
+plot(Y_yline, tx_yline, '-o','LineWidth',1.5);
+ylabel('\theta_x [rad]');
+grid on;
+
+subplot(3,1,3)
+plot(Y_yline, ty_yline, '-o','LineWidth',1.5);
+ylabel('\theta_y [rad]'); xlabel('y [m]');
+grid on;
+
+
+
+%% Plotting undeforemed mesh
+figure;
+hold on; axis equal;
+title('Undeformed Mesh');
+xlabel('X'); ylabel('Y');
+
+% Loop through each element and draw its edges
+for e = 1:size(c,1)
+    nodes = c(e,:);        % Node indices of the element
+    xe = coords(nodes,1);      % X coordinates of element nodes
+    ye = coords(nodes,2);      % Y coordinates of element nodes
+    
+    % Close the loop by appending the first node at the end
+    patch(xe([1:end 1]), ye([1:end 1]), 'w', 'EdgeColor', 'k');
+end
+
+hold off;
+
+
+%% Plotting the Deformed Mesh
+% Extract vertical displacement (w) for the deformed shape
+W = U(1:3:end);  % Every 3rd DOF corresponds to w (vertical displacement)
+
+% Get original X, Y coordinates
+X = coords(:,1);
+Y = coords(:,2);
+
+% Calculate deformed Z coordinates by adding the displacement W
+Z = W;
+
+% Triangulate the mesh for surface plotting (works for Q4 grid)
+tri = delaunay(X, Y);
+
+% Plot the deformed mesh
+figure;
+trisurf(tri, X, Y, Z, 'FaceColor','interp','EdgeColor','none');
+xlabel('X [m]');
+ylabel('Y [m]');
+zlabel('Deflection w [m]');
+title('Deformation of Plate (Deformed Mesh)');
+
+% Enhance visualization
+colorbar;
+view([-45 25]);  % Adjust angle for better 3D view
+axis equal tight;
+camlight headlight; 
+lighting gouraud;  % Enhances shading for 3D effect
+
+%% Plotting the Modeshapes of flat plate
+nModes = 2;
+
+for m = 1:nModes
+    modeShape = zeros(Ndof,1);
+    modeShape(freeDOF) = phi(:,m);
+    w = modeShape(1:3:end);  % there is 3 dof for each nodes % Only transverse displacement
+
+    figure;
+    nNodes = size(coords, 1);   % number of nodes
+    nNodeX = length(unique(coords(:,1)));  % unique x-coordinates = nodes along x
+    nNodeY = length(unique(coords(:,2)));  % unique y-coordinates = nodes along y
+
+    X = reshape(coords(:,1), nNodeY, nNodeX);
+    Y = reshape(coords(:,2), nNodeY, nNodeX);
+    W = reshape(w, nNodeY, nNodeX);
+
+    trisurf(tri, X, Y, W, 'FaceColor','interp','EdgeColor','none');
+    title(['Mode ',num2str(m),', f = ',num2str(freq_sorted(m),'%.2f'),' Hz']);
+    xlabel('x (m)'); ylabel('y (m)'); zlabel('w (m)');
+    shading interp; colorbar; axis equal tight
+end

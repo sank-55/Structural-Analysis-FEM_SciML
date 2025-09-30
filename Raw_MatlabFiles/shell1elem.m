@@ -1,0 +1,403 @@
+%% ---- Degenerated shell elements with 9 nodes with Mindlin Criteria____
+% Free Vibration analysis
+% x - y - z global coordinate system
+% x' - y' - z' local coorsinate system
+% v1, v2, v3 are the unit vectors along the local axis( give the i/p in this manner
+% v1 = [l1, m1 ,n1]'; v2 = [l2, m2 ,n2]'; v3 = [l3, m3 ,n3]';  % li,mi,ni are   direction cosines
+% a, b are the rotaion about x , y axis
+% inplane stress and principle stain along z (eps_z) is zero
+
+clear; close all;
+%% Properties of the shell
+% Inputs:
+E = 210e9;                      % Young's modulus (Pa)
+t = 0.025;                     %  Thickness of the plate in m
+rho = 8050;                     % density of the plate material(kg/m3)
+q= -150000;                           % Transvere (perpendicular) distributed force over domain (N/m2)
+nu = 0.3;                       % poisons ratio
+mu = 5/6;                       % depends upon the thickness( transverse shear starin)
+%le = 1;                         % elemental length 
+global_z = [0 0 1];
+%% Stress _ Starin Relation Matrix (sigmaz =0) %6x6
+D = (E / (1 - nu^2)) * [1, nu, 0, 0, 0, 0;
+                        nu, 1, 0, 0, 0, 0;
+                        0, 0, 0, 0, 0, 0;
+                        0, 0, 0, (1 - nu)/2, 0, 0;
+                        0, 0, 0, 0,  mu*((1 - nu)/2), 0;
+                        0, 0, 0, 0, 0, mu*((1 - nu)/2)];
+
+%% Cooridnates and Total element, dof declaration
+% Put The coordinate of the nodes
+        % bottom    top
+        %xj,yj,zj, xk,yk,zk
+coords= [ 0, 0, 0,  0, 0, 0.5
+         1, 0, 0,  1, 0, 0.5;
+         2, 0, 0,  2, 0, 0.5;
+
+         
+         0, 1, 0,  0, 1, 0.5;
+         1, 1, 0,  1, 1, 0.5;
+         2, 1, 0,  2, 1, 0.5;
+         
+       
+         
+         0, 2, 0,  0, 2, 0.5;      
+         1, 2, 0,  1, 2, 0.5;
+         2, 2, 0,  2, 2, 0.5
+         ];
+
+s=size(coords);
+
+%% Connectivity Matrix
+c = [ ...
+     1, 3, 9, 7, 2, 6, 8, 4 ,5;
+     
+];
+
+
+% May change according to condition
+Nelem = 1;                           % Total no of elements
+Nnode = s(1); %                        % Total no of nodes 
+Ndof = 5*Nnode;                     %Total no. of Dofs  ( Kirchoff's law)                
+
+%% get the Midpoint of the nodes or nodal coordinates 
+%  i = (j+k)/2
+mid_coords=zeros(Nnode,3);
+for i = 1:Nnode              %  xi                     yi                           zi
+    mid_coords(i,:)= 0.5*[coords(i,1)+coords(i,4) , coords(i,2)+coords(i,5) , coords(i,3)+coords(i,6)];
+end
+
+
+%% Assigning displacement and strain relationship using 6x9 matrix
+H = [1,0,0,0,0,0,0,0,0;
+     0,0,0,0,1,0,0,0,0;
+     0,0,0,0,0,0,0,0,1;
+     0,1,0,1,0,0,0,0,0;
+     0,0,0,0,0,1,0,1,0;
+     0,0,1,0,0,0,1,0,0];
+ 
+
+%% shape functions And its Dderivatives
+N = zeros(1,9);
+syms xi eta real                                  %  4---7---3
+    N1 = -0.25*(1 - xi)*(1 - eta)*(1 + xi + eta); %  |       |
+    N2 = -0.25*(1 + xi)*(1 - eta)*(1 - xi + eta); %  8   9   6
+    N3 = -0.25*(1 + xi)*(1 + eta)*(1 - xi - eta); %  |       |
+    N4 = -0.25*(1 - xi)*(1 + eta)*(1 + xi - eta); %  1---5---2
+    N5 =  0.5*(1 - xi^2)*(1 - eta);
+    N6 =  0.5*(1 + xi)*(1 - eta^2);
+    N7 =  0.5*(1 - xi^2)*(1 + eta);
+    N8 =  0.5*(1 - xi)*(1-eta^2);
+    N9 = (1- xi^2)*(1 - eta^2);
+
+    N= [N1,N2,N3,N4,N5,N6,N7,N8,N9 ];
+% zeta is varrying form form -1 to +1 where z is -h/2 and +h/2 mapping is 
+    %zeta = 2*z/h;
+    % % Overall matrix
+    % N_= N*[1 0 0 zeta*0.5*h 0;
+    %        0 1 0 0 zeta*0.5*h;
+    %        0 0 1 0 0];
+    % %% assigning the dof 
+    % U = N_*({u v w a b}');
+
+%% Gauss points(2D) and weights for 2x2 integration
+gp = [-sqrt(0.6) , -sqrt(0.6);
+           
+      sqrt(0.6) , -sqrt(0.6);
+     
+      sqrt(0.6),  sqrt(0.6);
+    
+      -sqrt(0.6) , sqrt(0.6);
+       0,    -sqrt(0.6);
+        sqrt(0.6),   0;
+      
+        0,    sqrt(0.6);
+        -sqrt(0.6),   0;
+      0   ,     0];
+
+w = [25/81;
+    40/81;
+    64/81];
+
+%% Global Initialization
+    Kg=zeros(Ndof,Ndof);
+    Mg = zeros(Ndof,Ndof);
+    Fg = zeros(Ndof,1);
+    %% Nodal points coordinates in xi-eta system(Master element)
+    % Natural coordinates (xi, eta) of each node in Q8 (standard layout
+    nodeXiEta = [
+        -1, -1;   % Node 1
+        0, -1;   % Node 5
+         1, -1;   % Node 2
+          1,  0;   % Node 6
+         1,  1;   % Node 3
+         0,  1;   % Node 7
+        -1,  1;   % Node 4
+        -1,  0;   % Node 8
+         0,  0 ]; % Node 9
+ %% calculating the differentiation of the shape functions
+ % {x,y,z}' = Sumof(Ni*{xi,yi,zi}' + Ni*h/2*zeta*{l3,m3,n3}') 
+    N_xi  = simplify(diff(N, xi));       % ∂N/∂xi
+    N_eta = simplify(diff(N, eta));     % ∂N/∂eta
+    dN_dxi =[ N_xi;
+              N_eta];
+    % ∂x/∂xi = sumof( ∂N/∂xi*xi + ∂N/∂xi*h/2*zeta*l3)
+    % at mid surface zeta = 0 
+   % dx_dxi = dN_dxi*XY ; %∂x/∂xi & ∂y/∂xi
+    
+%% Computation
+  for e = 1:Nelem
+    nodes = c(e,:);
+    XYZ = mid_coords(nodes,:); % takes coordinares of perticular element
+    % Derivatives w.r.t. xi and eta
+    %dN_dxi = zeros(2,12);
+
+
+    %% Initialization of local matrix within a element
+    Nof= zeros(3,45);
+    Ntf= zeros(3,45); % for me
+    Bzetaf = zeros(6,45);
+    Bof = zeros(6,45);  % for ke
+    Ke = zeros(45,45);
+    Me = zeros(45,45);
+    Fe = zeros(45,1);
+    J = zeros(3,3);
+    Jtotal = zeros(9,9); % for ke(B matrix) 
+    V_edge = zeros(9,3); % for me(displacement related)
+
+
+%% calculating the Edge vectors within a element
+    for cnt=1:9
+                k = nodes(cnt);
+                %k_= k+1;
+                h = sqrt((coords(k,1)-coords(k,4))^2 + (coords(k,2)-coords(k,5))^2 + (coords(k,3)-coords(k,6))^2);
+                V_edge(cnt,:)= -[(coords(k,1)-coords(k,4)), (coords(k,2)-coords(k,5)), (coords(k,3)-coords(k,6))];
+    end
+
+    %% element wise computation
+    % as we are evaluating at the midsurface the zeta is 0
+    zeta =0;
+    for i = 1:9
+            % Gauss points are for evaluation
+            xi_val = gp(i,1);
+            eta_val = gp(i,2);
+
+            if(i>4 && i<9)
+            wts = w(2);
+            elseif(i==9)
+                   wts= w(3);
+            else 
+                wts=w(1);
+            end
+            % calculating the N and its derivatives 
+            N_val = double(subs(N, [xi, eta], [xi_val, eta_val]));
+            dN_dxi_val= double(subs(dN_dxi, [xi, eta], [xi_val, eta_val]));
+
+            %% jacobian and total jacobian calculation
+                % ∂x/∂xi = sumof( ∂N/∂xi*xi + ∂N/∂xi*h/2*zeta*l3)
+                % at mid surface zeta = 0 
+                % 3x3 matrix
+                dx_dxi = dN_dxi_val*XYZ ; %∂x/∂xi , ∂y/∂xi & ∂z/∂xi
+                % jacobian for integral
+                J(1:2,:) = dx_dxi;
+                J(3,:) = 0.5*N_val*V_edge; % 1x3
+                detJ = det(J);
+                % Calculating the overall jacobian matrix
+                %Total jacobian
+                for p =1:3
+                Jtotal(3*(p-1)+1:3*p, 3*(p-1)+1:3*p) =   inv(J); 
+                end       % 9x9
+
+                fprintf("Node %d, Gauss pt %d: det(J) = %f\n", cnt, i, det(J));
+            %% loop for nodal calculation
+            for cnt=1:9
+                k = nodes(cnt);
+                %k_= k+1;
+                h = sqrt((coords(k,1)-coords(k,4))^2 + (coords(k,2)-coords(k,5))^2 + (coords(k,3)-coords(k,6))^2);
+                xi_ = nodeXiEta(cnt,1);
+                eta_ = nodeXiEta(cnt,2);
+                dN_dxi_= double(subs(dN_dxi, [xi, eta], [xi_, eta_]));
+
+                %% calculating the 2 tangent vector on that node( only for this actual nodal points are needed)
+                % Compute tangent vectors  
+                e1 = dN_dxi_(1,:) * XYZ; %1x3
+                e2 = dN_dxi_(2,:)* XYZ;  %1x3
+
+                % Normalize
+                e1_unit = e1 / norm(e1);
+                e2_unit = e2 / norm(e2);
+
+                e3 = cross(e1_unit,e2_unit);
+                e3_unit= e3/norm(e3);
+                
+                %% final local axis on that node
+                v3 = e3_unit;
+                v1 = e1_unit;
+                if dot(v3, global_z) < 0
+                    v3 = -v3;
+                    v2 = cross(v3, v1) / norm(cross(v3, v1));
+                else
+                    v2= cross(v3,v1)/norm(cross(v3,v1));
+                end
+
+       
+                %% Transformation to global Coordinates Matrix (6x6)
+                lx = v1(1); ly = v2(1); lz = v3(1);
+                mx = v1(2); my = v2(2); mz = v3(2);
+                nx = v1(3); ny = v2(3); nz = v3(3);
+                
+                 T_eps = [  lx^2      mx^2      nx^2       2*lx*mx       2*mx*nx       2*nx*lx;
+                            ly^2      my^2      ny^2       2*ly*my       2*my*ny       2*ny*ly;
+                            lz^2      mz^2      nz^2       2*lz*mz       2*mz*nz       2*nz*lz;
+                            lx*ly     mx*my     nx*ny      lx*my+mx*ly   mx*ny+nx*my   nx*ly+lx*ny;
+                            ly*lz     my*mz     ny*nz      ly*mz+my*lz   my*nz+ny*mz   ny*lz+ly*nz;
+                            lz*lx     mz*mx     nz*nx      lz*mx+mz*lx   mz*nx+nz*mx   nz*lx+lz*nx];
+
+                %% displacement matrix for Mass
+                Nof(:,(5*(cnt-1)+1):5*cnt)= N_val(cnt)*[1,0,0,0,0;
+                                                        0,1,0,0,0;
+                                                        0,0,1,0,0];
+
+                Ntf(:,(5*(cnt-1)+1):5*cnt)= N_val(cnt)*[  0, 0, 0, -0.5*h*v2(1), 0.5*h*v1(1);
+                                                          0, 0, 0, -0.5*h*v2(2), 0.5*h*v1(2);
+                                                          0, 0, 0, -0.5*h*v2(3), 0.5*h*v1(3)];
+               %% Overall Transportation Matrix
+                E = T_eps*H*Jtotal;
+
+               %% strain displacement matrix
+
+  Bof(:,(5*(cnt-1)+1):5*cnt) =  E*[ dN_dxi_val(1,cnt), 0,  0,  0,  0;
+                                    dN_dxi_val(2,cnt), 0,  0 ,  0,  0;
+                                    0 ,   0,  0, -N_val(cnt)*0.5*h*v2(1), N_val(cnt)*0.5*h*v1(1);
+                                    0 ,   dN_dxi_val(1,cnt), 0, 0, 0;
+                                    0 ,   dN_dxi_val(2,cnt), 0, 0, 0;
+                                    0 , 0,  0, -N_val(cnt)*0.5*h*v2(2), N_val(cnt)*0.5*h*v1(2);
+                                    0,   0,  dN_dxi_val(1,cnt),  0,  0;
+                                    0,   0,  dN_dxi_val(2,cnt), 0,  0;
+                                    0,  0,  0, -N_val(cnt)*0.5*h*v2(3), N_val(cnt)*0.5*h*v1(3)]; 
+                
+Bzetaf(:,(5*(cnt-1)+1):5*cnt) = E*[ 0, 0, 0, -dN_dxi_val(1,cnt)*h*0.5*v2(1) , dN_dxi_val(1,cnt)*h*0.5*v1(1);
+                                    0, 0, 0, -dN_dxi_val(2,cnt)*h*0.5*v2(1) , dN_dxi_val(2,cnt)*h*0.5*v1(1);
+                                    0,      0,     0 ,    0 ,     0;
+                                    0, 0, 0, -dN_dxi_val(1,cnt)*h*0.5*v2(2) , dN_dxi_val(1,cnt)*h*0.5*v1(2);
+                                    0, 0, 0, -dN_dxi_val(2,cnt)*h*0.5*v2(2) , dN_dxi_val(2,cnt)*h*0.5*v1(2);
+                                    0,      0,     0 ,    0 ,     0;
+                                    0, 0, 0, -dN_dxi_val(1,cnt)*h*0.5*v2(3) , dN_dxi_val(1,cnt)*h*0.5*v1(3);
+                                    0, 0, 0, -dN_dxi_val(2,cnt)*h*0.5*v2(3) , dN_dxi_val(2,cnt)*h*0.5*v1(3);
+                                    0,      0,     0 ,    0 ,     0];
+
+                    %main deflection matrix is B_
+               % B_= Bo + Bzeta;
+
+                % % Overall Transportation Matrix
+                % E = T_eps*H*Jtotal;
+                % 
+                % % calculating Bfinal
+                % B_val = double(subs(B_, [xi, eta], [xi_val, eta_val]));
+                % Bo_val = double(subs(Bo, [xi, eta], [xi_val, eta_val]));
+                % Bzeta_val = double(subs(Bzeta, [xi, eta], [xi_val, eta_val]));
+                % 
+                % Bof(:,(5*(cnt-1)+1):5*cnt)= E*Bo_val;
+                % Bzetaf(:,(5*(cnt-1)+1):5*cnt) = E*Bzeta_val;
+
+                %% det +ve
+                if(det(J)<0)
+                    detJ = -det(J);
+                end
+                %%computing the force vector
+                Fe(5*(cnt-1)+3) = Fe(5*(cnt-1)+3) + q * N_val(cnt) * detJ * wts;
+                fprintf("cnt = %d, node = %d, DOF = %d, N_val = %.4f, det(J) = %.4f, contrib = %.4f\n", ...
+                cnt, nodes(cnt), 5*(nodes(cnt)-1)+3, N_val(cnt), det(J), q * N_val(cnt) * detJ * wts);
+            
+            end
+                %Bfinal((5*(cnt-1)+1):5*cnt,:)=2*Bof'*D*Bof + (2/3)*Bzetaf'*D* Bzetaf;
+            % Computing the Stiffness Matrix
+            Ke = Ke + ((2*Bof'*D*Bof) + (2/3)*Bzetaf'*D* Bzetaf)*(detJ)*wts;
+             % Computing the Mass Matrix
+            Me = Me +  rho*(2*(Nof)'*Nof + (2/3)*(Ntf')*Ntf)*detJ*wts;
+                                                                                                                                                                                                                                                                                                                                                        
+     end
+   
+        %%%% ***Put into the logic for finding global k
+    dofs = reshape([5*(nodes-1)+1; 5*(nodes-1)+2 ; 5*(nodes-1)+3 ; 5*(nodes-1)+4 ; 5*nodes],1,[]);
+    % Global matrix is properly shaped before adding ke in required position
+    % Add to global stiffness matrix
+    Kg(dofs,dofs) = Kg(dofs,dofs) + Ke; %% **reshape funcn
+    Mg(dofs,dofs) = Mg(dofs,dofs) + Me;
+    Fg(dofs,1) = Fg(dofs,1) + Fe;
+    % Global force vector computing ****
+    %Fg(dofs,1) = Fg(dofs,1) + Fe;
+
+  end
+
+%% Applying the Boundary Conditions
+% in  this case left edge is fixed
+fixedDOF = [1 2 3 4 5    16, 17, 18, 19, 20,   31 ,32 ,33, 34, 35   ];  % take care of both u ,v
+freeDOF = setdiff(1:Ndof, fixedDOF);
+Kf = Kg(freeDOF,freeDOF);
+Mf = Mg(freeDOF,freeDOF);
+Ff = Fg(freeDOF);
+
+%% solving static problem
+U = zeros(Ndof, 1);
+U(freeDOF) = Kf \ Ff;
+
+fprintf("\n force vect :\n");
+disp(Ff(3:5:end));
+fprintf("\nDisplacement:\n");
+disp(U(3:5:end));
+
+%% displaying transverse displacement
+% Get coordinates and w values
+x = mid_coords(:,1);
+y = mid_coords(:,2);
+z = U(3:5:end);
+
+% Interpolate onto a regular grid
+xq = linspace(min(x), max(x), 50);
+yq = linspace(min(y), max(y), 50);
+[Xq, Yq] = meshgrid(xq, yq);
+
+F = scatteredInterpolant(x, y, z, 'natural');
+Zq = F(Xq, Yq);
+
+% Surface plot
+figure;
+surf(Xq, Yq, Zq);
+title('Deflected Mid-Surface (Interpolated)');
+xlabel('x'); ylabel('y'); zlabel('w');
+shading interp; colorbar; view(45,30);
+
+%% Calculating eig values  ------
+    % Solve eigenvalue problem
+[phi, omega2] = eig(Kf, Mf);
+
+    % Natural frequencies (Hz)
+omega = sqrt(diag(omega2));       % rad/s
+freq = omega / (2*pi);             % Hz
+
+    % Sorting frequencies
+[freq_sorted, idx_sort] = sort(freq);
+phi = phi(:, idx_sort);
+
+% Display first few natural frequencies
+disp('First few natural frequencies (Hz):');
+disp(freq_sorted(1:20));
+
+%% Plotting undeforemed mesh
+figure;
+hold on; axis equal;
+title('Undeformed Mesh');
+xlabel('X'); ylabel('Y');
+
+% Loop through each element and draw its edges
+for e = 1:size(c,1)
+    nodes = c(e,:);        % Node indices of the element
+    xe = coords(nodes,1);      % X coordinates of element nodes
+    ye = coords(nodes,2);      % Y coordinates of element nodes
+    
+    % Close the loop by appending the first node at the end
+    patch(xe([1:end 1]), ye([1:end 1]), 'w', 'EdgeColor', 'k');
+end
+
+hold off;
