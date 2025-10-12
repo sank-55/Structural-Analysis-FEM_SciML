@@ -1,3 +1,21 @@
+After Impleneting the time merching solution for plate like structure in FEM ( using Neumark Beta Integration Scheme)  I get this results :
+
+( In this plot I have used different different cases for weightage - i. biased towards measured value (0.1, 0.9),  ii. Balaced Approach(0.6,0.4)  iii. Focusing Fem Predicted Solution (0.9,0.1)
+<img width="1104" height="622" alt="Screenshot 2025-10-12 184602" src="https://github.com/user-attachments/assets/e9c5a24b-b6f3-46c9-87e4-80cc9b279473" />
+
+ While Plotting the Measured points and comparing the results with FEM predicted and KF estimated Solution
+ (I know there are some mistakes while comparing the estimating the kalman filter feedback loop it will be easily debugged)
+
+<img width="886" height="644" alt="Screenshot 2025-10-12 184313" src="https://github.com/user-attachments/assets/e8732971-9411-4acd-80eb-49d22912fad9" />
+
+<img width="1035" height="670" alt="Screenshot 2025-10-12 184322" src="https://github.com/user-attachments/assets/548d94f5-4928-4139-88c1-db5af38724d7" />
+
+<img width="1190" height="661" alt="Screenshot 2025-10-12 184337" src="https://github.com/user-attachments/assets/f2d97de9-7024-44f6-b00f-a1bd969cf9ae" />
+
+
+<h/>
+
+
 Results of  KF_PLATE(beamExtended).m
 <img width="1175" height="649" alt="Screenshot 2025-10-08 170916" src="https://github.com/user-attachments/assets/cc2f98ae-77de-4a72-b32e-ff9c0f56aaa2" />
 <img width="1146" height="677" alt="Screenshot 2025-10-07 203857" src="https://github.com/user-attachments/assets/9a5e2dc8-5912-46de-99ea-320ebbfb5a55" />
