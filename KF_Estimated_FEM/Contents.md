@@ -1,3 +1,13 @@
+Here are the Time merching solution with KF Estimated one using model reduction for plate type of problem
+
+
+
+<img width="1190" height="661" alt="Screenshot 2025-10-12 184337" src="https://github.com/user-attachments/assets/9a690343-bfec-4ee3-80e0-9a98ce6d0d8e" />
+
+<img width="1104" height="622" alt="Screenshot 2025-10-12 184602" src="https://github.com/user-attachments/assets/cc03dc41-fb3f-4fa3-a7ff-3e5cfe790d77" />
+<img width="1246" height="621" alt="Screenshot 2025-10-14 120518" src="https://github.com/user-attachments/assets/04463a57-4b4e-4ca8-bbd2-ff718e4214fc" />
+
+
 After Impleneting the time merching solution for plate like structure in FEM ( using Neumark Beta Integration Scheme)  I get this results :
 
 ( In this plot I have used different different cases for weightage - i. biased towards measured value (0.1, 0.9),  ii. Balaced Approach(0.6,0.4)  iii. Focusing Fem Predicted Solution (0.9,0.1)
