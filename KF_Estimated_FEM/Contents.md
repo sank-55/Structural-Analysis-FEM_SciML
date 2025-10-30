@@ -1,3 +1,8 @@
+After impelenting parameter estimation using DUAL KALMNAN FILTERING METHOD
+
+
+<img width="1150" height="638" alt="Screenshot 2025-10-29 184420" src="https://github.com/user-attachments/assets/a29eb451-6533-4bbf-aa97-cd05b3187b73" />
+
 Here are the Time merching solution with KF Estimated one using model reduction for plate type of problem
 
 
