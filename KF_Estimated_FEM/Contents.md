@@ -1,4 +1,6 @@
 After impelenting parameter estimation using DUAL KALMNAN FILTERING METHOD
+<img width="575" height="214" alt="Screenshot 2025-11-19 155201" src="https://github.com/user-attachments/assets/78bbe053-4522-4412-b9da-24834731e78c" />
+<img width="545" height="221" alt="Screenshot 2025-11-19 175437" src="https://github.com/user-attachments/assets/d733b2fa-7880-4452-9ca3-3cab61dec7fb" />
 
 
 <img width="1150" height="638" alt="Screenshot 2025-10-29 184420" src="https://github.com/user-attachments/assets/a29eb451-6533-4bbf-aa97-cd05b3187b73" />
