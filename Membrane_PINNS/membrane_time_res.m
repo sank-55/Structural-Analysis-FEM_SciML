@@ -2,519 +2,649 @@
 % Contains the Modified output of the Neural Network using the Boundary condition ( Lagaris Condition)
 %
 
-% clc;
-% clear all;
+% clc; clear;
 % 
-% % ------------------ DATA: COLLLOCATION POINTS ------------------
+% %% ================= SECTION 1: CONVENTIONAL PINN (FORWARD) ================
+% fprintf('\n========== SECTION 1: CONVENTIONAL PINN - FORWARD SOLUTION ==========\n');
+% 
+% % --- Boundary condition points ---
+% numBoundaryConditionPoints = [250 250 250 250];
+% 
+% x0BC1 = linspace(0,1,numBoundaryConditionPoints(1));  % y = 0
+% x0BC2 = linspace(0,1,numBoundaryConditionPoints(2));  % y = 1
+% x0BC3 = ones(1,numBoundaryConditionPoints(3));        % x = 1
+% x0BC4 = zeros(1,numBoundaryConditionPoints(4));       % x = 0
+% 
+% y0BC1 = zeros(1,numBoundaryConditionPoints(1));
+% y0BC2 = ones(1,numBoundaryConditionPoints(2));
+% y0BC3 = linspace(0,1,numBoundaryConditionPoints(3));
+% y0BC4 = linspace(0,1,numBoundaryConditionPoints(4));
+% 
 % Tlimit = 1/(2*sqrt(2));
-% numInternalCollocationPoints = 7000;
+% t0BC1 = linspace(0,Tlimit,numBoundaryConditionPoints(1));
+% t0BC2 = linspace(0,Tlimit,numBoundaryConditionPoints(2));
+% t0BC3 = linspace(0,Tlimit,numBoundaryConditionPoints(3));
+% t0BC4 = linspace(0,Tlimit,numBoundaryConditionPoints(4));
 % 
-% points = lhsdesign(numInternalCollocationPoints,3);   % [x,y,t] in (0,1)^2 x (0,Tlimit)
-% dataT = Tlimit*points(:,3);
+% u0BC1 = zeros(1,numBoundaryConditionPoints(1));
+% u0BC2 = zeros(1,numBoundaryConditionPoints(2));
+% u0BC3 = zeros(1,numBoundaryConditionPoints(3));
+% u0BC4 = zeros(1,numBoundaryConditionPoints(4));
+% 
+% % --- Initial condition points ---
+% numInitialConditionPoints = 1000;
+% x0IC = linspace(0,1,numInitialConditionPoints);
+% y0IC = linspace(0,1,numInitialConditionPoints);
+% t0IC = zeros(1,numInitialConditionPoints);
+% u0IC = sin(pi*x0IC).*sin(pi*y0IC);
+% 
+% % --- Internal collocation points ---
+% numInternalCollocationPoints = 5000;
+% points = lhsdesign(numInternalCollocationPoints,3);
 % dataX = points(:,1);
 % dataY = points(:,2);
+% dataT = Tlimit*points(:,3);
 % 
-% ds = arrayDatastore([dataX dataY dataT]);
+% ds = arrayDatastore([dataX,dataY,dataT],'IterationDimension',1);
 % 
-% % ------------------ NETWORK DEFINITION ------------------
+% % --- Network definition ---
 % numLayers  = 4;
 % numNeurons = 20;
 % 
 % parameters = struct;
 % 
-% % first layer
+% % fc1: 3 inputs -> hidden
 % sz = [numNeurons 3];
 % parameters.fc1.Weights = initializeHe(sz,3);
 % parameters.fc1.Bias    = initializeZeros([numNeurons 1]);
 % 
 % % hidden layers
 % for layerNumber = 2:numLayers-1
-%     name = "fc" + layerNumber;
-%     sz   = [numNeurons numNeurons];
-%     numIn = numNeurons;
-%     parameters.(name).Weights = initializeHe(sz,numIn);
+%     name = ['fc',num2str(layerNumber)];
+%     sz = [numNeurons numNeurons];
+%     parameters.(name).Weights = initializeHe(sz,numNeurons);
 %     parameters.(name).Bias    = initializeZeros([numNeurons 1]);
 % end
 % 
-% % last layer
+% % output layer: hidden -> 1
 % sz = [1 numNeurons];
-% numIn = numNeurons;
-% parameters.("fc" + numLayers).Weights = initializeHe(sz,numIn);
-% parameters.("fc" + numLayers).Bias    = initializeZeros([1 1]);
+% parameters.(['fc',num2str(numLayers)]).Weights = initializeHe(sz,numNeurons);
+% parameters.(['fc',num2str(numLayers)]).Bias    = initializeZeros([1 1]);
 % 
-% % ---------- wrap parameters as dlarray and optionally move to GPU ----------
-% paramNames = fieldnames(parameters);
-% for k = 1:numel(paramNames)
-%     layerName = paramNames{k};
-%     parameters.(layerName).Weights = dlarray(parameters.(layerName).Weights);
-%     parameters.(layerName).Bias    = dlarray(parameters.(layerName).Bias);
-% end  % [web:9][web:43]
+% % --- Training options ---
+% numEpochs        = 1000;
+% miniBatchSize    = 1000;
+% executionEnvironment = 'auto';
+% initialLearnRate = 0.01;
+% decayRate        = 0.005;
 % 
-% % ------------------ TRAINING OPTIONS ------------------
-% numEpochs            = 5000;
-% miniBatchSize        = 1000;
-% executionEnvironment = "auto";
-% initialLearnRate     = 0.01;
-% decayRate            = 0.005;
-% 
-% % if using GPU, move parameters once
-% if (executionEnvironment == "auto" && canUseGPU) || (executionEnvironment == "gpu")
-%     for k = 1:numel(paramNames)
-%         layerName = paramNames{k};
-%         parameters.(layerName).Weights = gpuArray(parameters.(layerName).Weights);
-%         parameters.(layerName).Bias    = gpuArray(parameters.(layerName).Bias);
-%     end
-% end  % [web:6][web:43]
-% 
-% % ------------------ MINIBATCHQUEUE ------------------
 % mbq = minibatchqueue(ds, ...
 %     'MiniBatchSize',miniBatchSize, ...
-%     'MiniBatchFormat','BC', ...
-%     'OutputEnvironment',executionEnvironment);  % returns dlarray batches [web:35][web:43]
+%     'MiniBatchFormat','BC', ... % returns numeric, not formatted dlarray
+%     'OutputEnvironment',executionEnvironment);
+% 
+% % IC/BC as unformatted dlarray (just numeric with tracing)
+% dlX0IC = dlarray(x0IC(:));  % column
+% dlY0IC = dlarray(y0IC(:));
+% dlT0IC = dlarray(t0IC(:));
+% dlU0IC = dlarray(u0IC(:));
+% 
+% dlX0BC1 = dlarray(x0BC1(:)); dlY0BC1 = dlarray(y0BC1(:)); dlT0BC1 = dlarray(t0BC1(:));
+% dlX0BC2 = dlarray(x0BC2(:)); dlY0BC2 = dlarray(y0BC2(:)); dlT0BC2 = dlarray(t0BC2(:));
+% dlX0BC3 = dlarray(x0BC3(:)); dlY0BC3 = dlarray(y0BC3(:)); dlT0BC3 = dlarray(t0BC3(:));
+% dlX0BC4 = dlarray(x0BC4(:)); dlY0BC4 = dlarray(y0BC4(:)); dlT0BC4 = dlarray(t0BC4(:));
+% 
+% dlU0BC1 = dlarray(u0BC1(:));
+% dlU0BC2 = dlarray(u0BC2(:));
+% dlU0BC3 = dlarray(u0BC3(:));
+% dlU0BC4 = dlarray(u0BC4(:));
+% 
+% if strcmp(executionEnvironment,'auto') && canUseGPU
+%     executionEnvironment = 'gpu';
+%     dlX0IC = gpuArray(dlX0IC); dlY0IC = gpuArray(dlY0IC);
+%     dlT0IC = gpuArray(dlT0IC); dlU0IC = gpuArray(dlU0IC);
+%     dlX0BC1 = gpuArray(dlX0BC1); dlY0BC1 = gpuArray(dlY0BC1); dlT0BC1 = gpuArray(dlT0BC1);
+%     dlX0BC2 = gpuArray(dlX0BC2); dlY0BC2 = gpuArray(dlY0BC2); dlT0BC2 = gpuArray(dlT0BC2);
+%     dlX0BC3 = gpuArray(dlX0BC3); dlY0BC3 = gpuArray(dlY0BC3); dlT0BC3 = gpuArray(dlT0BC3);
+%     dlX0BC4 = gpuArray(dlX0BC4); dlY0BC4 = gpuArray(dlY0BC4); dlT0BC4 = gpuArray(dlT0BC4);
+%     dlU0BC1 = gpuArray(dlU0BC1); dlU0BC2 = gpuArray(dlU0BC2);
+%     dlU0BC3 = gpuArray(dlU0BC3); dlU0BC4 = gpuArray(dlU0BC4);
+% end
 % 
 % averageGrad   = [];
 % averageSqGrad = [];
 % 
-% figure(1)
+% figure('Name','Conventional PINN Training Loss');
 % C = colororder;
 % lineLoss = animatedline('Color',C(2,:));
-% ylim([0 inf])
-% xlabel("Iteration")
-% ylabel("Loss")
-% grid on
+% ylim([0 inf]); xlabel('Iteration'); ylabel('Loss'); grid on;
 % 
-% c = 1;  % wave speed
-% start = tic;
+% c = 1;
+% start     = tic;
 % iteration = 0;
 % 
-% % ------------------ TRAINING LOOP ------------------
 % for epoch = 1:numEpochs
 %     reset(mbq);
-% 
 %     while hasdata(mbq)
 %         iteration = iteration + 1;
+%         batch = next(mbq);        % numeric N x 3
+%         x = batch(:,1);
+%         y = batch(:,2);
+%         t = batch(:,3);
 % 
-%         dlXYT = next(mbq);        % size: 3 x batchSize, format 'BC'
-%         dlX = dlXYT(1,:);
-%         dlY = dlXYT(2,:);
-%         dlT = dlXYT(3,:);
-% 
-%         % convert to 'CB' (channel x batch) for fullyconnect
-%         dlX = dlarray(dlX,'CB');
-%         dlY = dlarray(dlY,'CB');
-%         dlT = dlarray(dlT,'CB');
-% 
-%         if (executionEnvironment == "auto" && canUseGPU) || (executionEnvironment == "gpu")
-%             dlX = gpuArray(dlX);
-%             dlY = gpuArray(dlY);
-%             dlT = gpuArray(dlT);
+%         dlX = dlarray(x);        % N x 1
+%         dlY = dlarray(y);
+%         dlT = dlarray(t);
+%         if strcmp(executionEnvironment,'gpu')
+%             dlX = gpuArray(dlX); dlY = gpuArray(dlY); dlT = gpuArray(dlT);
 %         end
 % 
-%         % physics loss only (IC/BC enforced via trial solution)
-%         [gradients,loss] = dlfeval(@modelGradients,parameters,dlX,dlY,dlT,c);  % [web:9][web:6]
+%         [gradients,loss] = dlfeval(@modelGradients_ConvPINN,parameters,dlX,dlY,dlT, ...
+%             dlX0IC,dlY0IC,dlT0IC,dlU0IC, ...
+%             dlX0BC1,dlY0BC1,dlT0BC1, ...
+%             dlX0BC2,dlY0BC2,dlT0BC2, ...
+%             dlX0BC3,dlY0BC3,dlT0BC3, ...
+%             dlX0BC4,dlY0BC4,dlT0BC4,c);
 % 
-%         % learning rate decay
-%         learningRate = initialLearnRate / (1+decayRate*iteration);
-% 
-%         % Adam update (keeps dlarray type) [web:6]
-%         [parameters,averageGrad,averageSqGrad] = adamupdate( ...
-%             parameters,gradients,averageGrad,averageSqGrad,iteration,learningRate);
+%         learningRate = initialLearnRate/(1 + decayRate*iteration);
+%         [parameters,averageGrad,averageSqGrad] = adamupdate(parameters,gradients, ...
+%             averageGrad,averageSqGrad,iteration,learningRate);
 %     end
 % 
-%     lossPlot = double(gather(extractdata(loss)));
-%     addpoints(lineLoss,iteration, lossPlot);
-% 
+%     lossVal = double(gather(extractdata(loss)));
+%     addpoints(lineLoss,iteration,lossVal);
 %     D = duration(0,0,toc(start),'Format','hh:mm:ss');
-%     title("Epoch: " + epoch + ", Elapsed: " + string(D) + ", Loss: " + lossPlot)
-%     drawnow
+%     title(['Epoch ',num2str(epoch),', Elapsed: ',string(D),', Loss: ',num2str(lossVal)]);
+%     drawnow;
 % end
 % 
-% % ------------------ EVALUATION ------------------
-% tTest = [0.1 0.15 0.20 0.25];
-% numPredictions = 1000;
-% XTest_points = linspace(0,1,numPredictions);
-% YTest_points = linspace(0,1,numPredictions);
-% [Xmesh,Ymesh] = meshgrid(XTest_points,YTest_points);
+% fprintf('Computing predictions for Conventional PINN...\n');
 % 
-% for i = 1:length(tTest)
+% tTest          = [0.1 0.15 0.20 0.25];
+% numPredictions = 200;
+% XTestpoints    = linspace(0,1,numPredictions);
+% YTestpoints    = linspace(0,1,numPredictions);
+% [Xmesh,Ymesh]  = meshgrid(XTestpoints,YTestpoints);
+% 
+% UPredstori = cell(numel(tTest),1);
+% UTeststori = cell(numel(tTest),1);
+% errUstori  = cell(numel(tTest),1);
+% 
+% for i = 1:numel(tTest)
 %     t = tTest(i);
-%     TTest = t*ones(1,numPredictions);
+%     x_flat = Xmesh(:);
+%     y_flat = Ymesh(:);
+%     t_flat = t*ones(size(x_flat));
 % 
-%     dlUPred = zeros(size(Xmesh),'like',Xmesh);
-% 
-%     for j = 1:size(Xmesh,1)
-%         XTest = Xmesh(j,:);
-%         YTest = Ymesh(j,:);
-% 
-%         dlXTest = dlarray(XTest,'CB');
-%         dlYTest = dlarray(YTest,'CB');
-%         dlTTest = dlarray(TTest,'CB');
-% 
-%         if (executionEnvironment == "auto" && canUseGPU) || (executionEnvironment == "gpu")
-%             dlXTest = gpuArray(dlXTest);
-%             dlYTest = gpuArray(dlYTest);
-%             dlTTest = gpuArray(dlTTest);
-%         end
-% 
-%         % trial solution at test points (same form as in training) [web:1][web:8]
-%         dlUPred(j,:) = dlXTest.*(dlXTest-1).*dlYTest.*(dlYTest-1).*(dlTTest.^2).* ...
-%                        modelU(parameters,dlXTest,dlYTest,dlTTest) + ...
-%                        sin(pi*dlXTest).*sin(pi*dlYTest);
+%     dlXTest = dlarray(x_flat);
+%     dlYTest = dlarray(y_flat);
+%     dlTTest = dlarray(t_flat);
+%     if strcmp(executionEnvironment,'gpu')
+%         dlXTest = gpuArray(dlXTest);
+%         dlYTest = gpuArray(dlYTest);
+%         dlTTest = gpuArray(dlTTest);
 %     end
+%     dlUPred = modelU_ConvPINN(parameters,dlXTest,dlYTest,dlTTest); % N x 1
+%     UPred   = reshape(gather(extractdata(dlUPred)),size(Xmesh));
 % 
-%     % exact solution
-%       % exact solution
-%     UTest = sin(pi*Xmesh).*sin(pi*Ymesh)*cos(sqrt(2)*pi*t);
-%     UTest_stor{i} = UTest;
+%     UTest   = sin(pi*Xmesh).*sin(pi*Ymesh).*cos(sqrt(2)*pi*t);
+%     errU    = UPred - UTest;
 % 
-%     % dlUPred is already a numeric array (double or gpuArray), no extractdata needed [web:43]
-%     UPred = dlUPred;
-%     UPred_stor{i} = UPred;
-% 
-%     errU = UPred - UTest;
-%     errU_stor{i} = errU;
-% 
-% 
-%     figure(2)
-%     subplot(2,2,i)
-%     surf(Xmesh,Ymesh,UPred,'FaceAlpha',0.5,'EdgeColor','none')
-%     zlim([0 1])
-%     colorbar
-%     title("Predicted response at t = " + t);
-% 
-%     figure(3)
-%     subplot(2,2,i)
-%     surf(Xmesh,Ymesh,UTest,'FaceAlpha',0.5,'EdgeColor','none')
-%     colorbar
-%     title("True response at t = " + t);
-% 
-%     figure(4)
-%     subplot(2,2,i)
-%     surf(Xmesh,Ymesh,errU,'FaceAlpha',0.5,'EdgeColor','none')
-%     colorbar
-%     title("Error at t = " + t);
+%     UPredstori{i} = UPred;
+%     UTeststori{i} = UTest;
+%     errUstori{i}  = errU;
 % end
 % 
-% % ------------------ MODEL GRADIENTS FUNCTION ------------------
-% function [gradients,loss] = modelGradients(parameters,dlX,dlY,dlT,c)
-% 
-% % trial solution enforcing IC+BC:
-% % U(x,y,t) = t^2 * NN(x,y,t) * x(x-1)y(y-1) + sin(pi x) sin(pi y)
-% U = (dlT.^2).*modelU(parameters,dlX,dlY,dlT).*dlX.*(dlX-1).*dlY.*(dlY-1) + ...
-%     sin(pi*dlX).*sin(pi*dlY);
-% 
-% % first derivatives (higher order enabled) [web:6][web:36]
-% gradientsU = dlgradient(sum(U,'all'),{dlX,dlY,dlT},'EnableHigherDerivatives',true);
-% Ux = gradientsU{1};
-% Uy = gradientsU{2};
-% Ut = gradientsU{3};
-% 
-% % second derivatives
-% Uxx = dlgradient(sum(Ux,'all'),dlX,'EnableHigherDerivatives',true);
-% Uyy = dlgradient(sum(Uy,'all'),dlY,'EnableHigherDerivatives',true);
-% Utt = dlgradient(sum(Ut,'all'),dlT,'EnableHigherDerivatives',true);
-% 
-% % PDE residual: Utt - c^2 (Uxx + Uyy) = 0  -> here: c*(Uxx+Uyy) - Utt = 0
-% f1 = c*(Uxx + Uyy) - Utt;
-% zeroTarget1 = zeros(size(f1),'like',f1);
-% lossF = mse(f1, zeroTarget1);
-% 
-% loss = lossF;
-% 
-% % gradients w.r.t. dlarray parameters
-% gradients = dlgradient(loss,parameters);  % parameters is a struct of dlarrays [web:9]
+% figure('Name','Conventional PINN - Predicted Response');
+% for i = 1:numel(tTest)
+%     subplot(2,2,i);
+%     surf(Xmesh,Ymesh,UPredstori{i},'FaceAlpha',0.5,'EdgeColor','none');
+%     zlim([-1 1]); colorbar;
+%     title(['Predicted response at t = ',num2str(tTest(i))]);
+%     xlabel('x'); ylabel('y'); zlabel('u');
 % end
 % 
-% % ------------------ MODEL FUNCTION ------------------
-% function dlU = modelU(parameters,dlX,dlY,dlT)
-% dlXYT = [dlX; dlY; dlT];                    % 3 x batch, 'CB'
-% numLayers = numel(fieldnames(parameters));
-% 
-% % first fully connected
-% weights = parameters.fc1.Weights;
-% bias    = parameters.fc1.Bias;
-% dlU = fullyconnect(dlXYT,weights,bias);     % [web:37]
-% 
-% % remaining layers with sin nonlinearity
-% for i = 2:numLayers
-%     name = "fc" + i;
-%     dlU = sin(dlU);
-%     weights = parameters.(name).Weights;
-%     bias    = parameters.(name).Bias;
-%     dlU = fullyconnect(dlU, weights, bias);
-% end
+% figure('Name','Conventional PINN - Analytical Solution');
+% for i = 1:numel(tTest)
+%     subplot(2,2,i);
+%     surf(Xmesh,Ymesh,UTeststori{i},'FaceAlpha',0.5,'EdgeColor','none');
+%     zlim([-1 1]); colorbar;
+%     title(['True response at t = ',num2str(tTest(i))]);
+%     xlabel('x'); ylabel('y'); zlabel('u');
 % end
 % 
-% % ------------------ INITIALIZATION HELPERS ------------------
-% function W = initializeHe(sz,numIn)
-% W = randn(sz,'single')*sqrt(2/numIn);
+% figure('Name','Conventional PINN - Absolute Error');
+% for i = 1:numel(tTest)
+%     subplot(2,2,i);
+%     surf(Xmesh,Ymesh,errUstori{i},'FaceAlpha',0.5,'EdgeColor','none');
+%     colorbar;
+%     title(['Error at t = ',num2str(tTest(i))]);
+%     xlabel('x'); ylabel('y'); zlabel('error');
 % end
 % 
-% function B = initializeZeros(sz)
-% B = zeros(sz,'single');
-% end
-
-%---------------------------- SECTION 2 IS WORKING -----------------------
+% fprintf('Conventional PINN complete.\n\n');
 % 
-% %---------------------------------------------------------------------
-% %           SECTION 3 
-% %_______________________________________________________________________-
-% 
+% %% ================= SECTION 2: MODIFIED OUTPUT PINN (FORWARD) =============
+% fprintf('========== SECTION 2: MODIFIED OUTPUT PINN - FORWARD SOLUTION ==========\n');
 % clc;
-% clear all;
 % 
-% % ------------------ DATA: COLLLOCATION POINTS ------------------
 % Tlimit = 1/(2*sqrt(2));
-% numInternalCollocationPoints = 25000;
-% 
-% points = lhsdesign(numInternalCollocationPoints,3);   % [x,y,t] in (0,1)^2 x (0,Tlimit)
-% dataT = Tlimit*points(:,3);
+% numInternalCollocationPoints = 5000;
+% points = lhsdesign(numInternalCollocationPoints,3);
 % dataX = points(:,1);
 % dataY = points(:,2);
+% dataT = Tlimit*points(:,3);
+% ds    = arrayDatastore([dataX,dataY,dataT],'IterationDimension',1);
 % 
-% ds = arrayDatastore([dataX dataY dataT]);
-% 
-% % ------------------ NETWORK DEFINITION ------------------
 % numLayers  = 4;
 % numNeurons = 20;
 % 
-% parameters = struct;
-% 
-% % first layer
+% parameters_mod = struct;
 % sz = [numNeurons 3];
-% parameters.fc1.Weights = initializeHe(sz,3);
-% parameters.fc1.Bias    = initializeZeros([numNeurons 1]);
-% 
-% % hidden layers
+% parameters_mod.fc1.Weights = initializeHe(sz,3);
+% parameters_mod.fc1.Bias    = initializeZeros([numNeurons 1]);
 % for layerNumber = 2:numLayers-1
-%     name = "fc" + layerNumber;
-%     sz   = [numNeurons numNeurons];
-%     numIn = numNeurons;
-%     parameters.(name).Weights = initializeHe(sz,numIn);
-%     parameters.(name).Bias    = initializeZeros([numNeurons 1]);
+%     name = ['fc',num2str(layerNumber)];
+%     sz = [numNeurons numNeurons];
+%     parameters_mod.(name).Weights = initializeHe(sz,numNeurons);
+%     parameters_mod.(name).Bias    = initializeZeros([numNeurons 1]);
 % end
-% 
-% % last layer
 % sz = [1 numNeurons];
-% numIn = numNeurons;
-% lastName = "fc" + numLayers;
-% parameters.(lastName).Weights = initializeHe(sz,numIn);
-% parameters.(lastName).Bias    = initializeZeros([1 1]);
+% parameters_mod.(['fc',num2str(numLayers)]).Weights = initializeHe(sz,numNeurons);
+% parameters_mod.(['fc',num2str(numLayers)]).Bias    = initializeZeros([1 1]);
 % 
-% % identification parameter c (wave speed squared or coefficient)
-% parameters.(lastName).opt_param = dlarray(1.25);   % learnable scalar [web:45][web:46]
+% numEpochs        = 1000;
+% miniBatchSize    = 1000;
+% initialLearnRate = 0.01;
+% decayRate        = 0.005;
 % 
-% % wrap weights and biases as dlarray
-% paramNames = fieldnames(parameters);
-% for k = 1:numel(paramNames)
-%     layerName = paramNames{k};
-%     parameters.(layerName).Weights = dlarray(parameters.(layerName).Weights);
-%     parameters.(layerName).Bias    = dlarray(parameters.(layerName).Bias);
-% end  % [web:9][web:43]
-% 
-% % ------------------ TRAINING OPTIONS ------------------
-% numEpochs            = 500;  % NEED MAXIMUM NO. OF EPOCHS
-% miniBatchSize        = 10000;
-% executionEnvironment = "auto";
-% initialLearnRate     = 0.01;
-% decayRate            = 0.005;
-% 
-% % ------------------ MINIBATCHQUEUE ------------------
 % mbq = minibatchqueue(ds, ...
 %     'MiniBatchSize',miniBatchSize, ...
 %     'MiniBatchFormat','BC', ...
-%     'OutputEnvironment',executionEnvironment);  % [web:35][web:49]
+%     'OutputEnvironment',executionEnvironment);
 % 
 % averageGrad   = [];
 % averageSqGrad = [];
 % 
-% figure(1)
+% figure('Name','Modified PINN Training Loss');
 % C = colororder;
 % lineLoss = animatedline('Color',C(2,:));
-% ylim([0 inf])
-% xlabel("Iteration")
-% ylabel("Loss")
-% grid on
+% ylim([0 inf]); xlabel('Iteration'); ylabel('Loss'); grid on;
 % 
-% % simulated measurement data for inverse term
-% n_data      = 5000;
-% data_points = lhsdesign(n_data,3);
-% t_data      = Tlimit*data_points(:,3);
-% x_data      = data_points(:,1);
-% y_data      = data_points(:,2);
+% c = 1;
+% start     = tic;
+% iteration = 0;
 % 
-% figure(2)
+% for epoch = 1:numEpochs
+%     reset(mbq);
+%     while hasdata(mbq)
+%         iteration = iteration + 1;
+%         batch = next(mbq);
+%         dlX   = dlarray(batch(:,1));
+%         dlY   = dlarray(batch(:,2));
+%         dlT   = dlarray(batch(:,3));
+% 
+%         [gradients,loss] = dlfeval(@modelGradients_ModifiedPINN,parameters_mod,dlX,dlY,dlT,c);
+%         learningRate = initialLearnRate/(1 + decayRate*iteration);
+%         [parameters_mod,averageGrad,averageSqGrad] = adamupdate(parameters_mod,gradients, ...
+%             averageGrad,averageSqGrad,iteration,learningRate);
+%     end
+% 
+%     lossVal = double(gather(extractdata(loss)));
+%     addpoints(lineLoss,iteration,lossVal);
+%     D = duration(0,0,toc(start),'Format','hh:mm:ss');
+%     title(['Epoch ',num2str(epoch),', Elapsed: ',string(D),', Loss: ',num2str(lossVal)]);
+%     drawnow;
+% end
+% 
+% fprintf('Computing predictions for Modified Output PINN...\n');
+% 
+% tTest          = [0.1 0.15 0.20 0.25];
+% numPredictions = 200;
+% XTestpoints    = linspace(0,1,numPredictions);
+% YTestpoints    = linspace(0,1,numPredictions);
+% [Xmesh,Ymesh]  = meshgrid(XTestpoints,YTestpoints);
+% 
+% UPredstori = cell(numel(tTest),1);
+% UTeststori = cell(numel(tTest),1);
+% errUstori  = cell(numel(tTest),1);
+% 
+% for i = 1:numel(tTest)
+%     t = tTest(i);
+%     x_flat = Xmesh(:);
+%     y_flat = Ymesh(:);
+%     t_flat = t*ones(size(x_flat));
+% 
+%     dlXTest = dlarray(x_flat);
+%     dlYTest = dlarray(y_flat);
+%     dlTTest = dlarray(t_flat);
+%     if strcmp(executionEnvironment,'gpu')
+%         dlXTest = gpuArray(dlXTest);
+%         dlYTest = gpuArray(dlYTest);
+%         dlTTest = gpuArray(dlTTest);
+%     end
+%     dlUPred = modelU_ModifiedPINN(parameters_mod,dlXTest,dlYTest,dlTTest);
+%     UPred   = reshape(gather(extractdata(dlUPred)),size(Xmesh));
+% 
+%     UTest   = sin(pi*Xmesh).*sin(pi*Ymesh).*cos(sqrt(2)*pi*t);
+%     errU    = UPred - UTest;
+% 
+%     UPredstori{i} = UPred;
+%     UTeststori{i} = UTest;
+%     errUstori{i}  = errU;
+% end
+% 
+% figure('Name','Modified PINN - Predicted Response');
+% for i = 1:numel(tTest)
+%     subplot(2,2,i);
+%     surf(Xmesh,Ymesh,UPredstori{i},'FaceAlpha',0.5,'EdgeColor','none');
+%     zlim([-1 1]); colorbar;
+%     title(['Predicted response at t = ',num2str(tTest(i))]);
+%     xlabel('x'); ylabel('y'); zlabel('u');
+% end
+% 
+% figure('Name','Modified PINN - Analytical Solution');
+% for i = 1:numel(tTest)
+%     subplot(2,2,i);
+%     surf(Xmesh,Ymesh,UTeststori{i},'FaceAlpha',0.5,'EdgeColor','none');
+%     zlim([-1 1]); colorbar;
+%     title(['True response at t = ',num2str(tTest(i))]);
+%     xlabel('x'); ylabel('y'); zlabel('u');
+% end
+% 
+% figure('Name','Modified PINN - Absolute Error');
+% for i = 1:numel(tTest)
+%     subplot(2,2,i);
+%     surf(Xmesh,Ymesh,errUstori{i},'FaceAlpha',0.5,'EdgeColor','none');
+%     colorbar;
+%     title(['Error at t = ',num2str(tTest(i))]);
+%     xlabel('x'); ylabel('y'); zlabel('error');
+% end
+% 
+% fprintf('Modified Output PINN complete.\n\n');
+% 
+% %% ================= SECTION 3: INVERSE PINN (IDENTIFY c) ==================
+% fprintf('========== SECTION 3: INVERSE PINN - PARAMETER IDENTIFICATION ==========\n');
+% clc;
+% 
+% Tlimit = 1/(2*sqrt(2));
+% 
+% numInternalCollocationPoints = 25000;
+% points = lhsdesign(numInternalCollocationPoints,3);
+% dataX = points(:,1);
+% dataY = points(:,2);
+% dataT = Tlimit*points(:,3);
+% ds    = arrayDatastore([dataX,dataY,dataT],'IterationDimension',1);
+% 
+% numLayers  = 4;
+% numNeurons = 20;
+% 
+% parameters_inv = struct;
+% sz = [numNeurons 3];
+% parameters_inv.fc1.Weights = initializeHe(sz,3);
+% parameters_inv.fc1.Bias    = initializeZeros([numNeurons 1]);
+% for layerNumber = 2:numLayers-1
+%     name = ['fc',num2str(layerNumber)];
+%     sz = [numNeurons numNeurons];
+%     parameters_inv.(name).Weights = initializeHe(sz,numNeurons);
+%     parameters_inv.(name).Bias    = initializeZeros([numNeurons 1]);
+% end
+% sz = [1 numNeurons];
+% parameters_inv.(['fc',num2str(numLayers)]).Weights = initializeHe(sz,numNeurons);
+% parameters_inv.(['fc',num2str(numLayers)]).Bias    = initializeZeros([1 1]);
+% 
+% % trainable wave speed c
+% parameters_inv.(['fc',num2str(numLayers)]).optparam = dlarray(1.25);
+% 
+% numEpochs        = 3000;
+% miniBatchSize    = 10000;
+% initialLearnRate = 0.01;
+% decayRate        = 0.005;
+% 
+% mbq = minibatchqueue(ds, ...
+%     'MiniBatchSize',miniBatchSize, ...
+%     'MiniBatchFormat','BC', ...
+%     'OutputEnvironment',executionEnvironment);
+% 
+% averageGrad   = [];
+% averageSqGrad = [];
+% 
+% figure('Name','Inverse PINN - Training Loss');
+% C = colororder;
+% lineLoss  = animatedline('Color',C(2,:));
+% ylim([0 inf]); xlabel('Iteration'); ylabel('Total Loss'); grid on;
+% 
+% figure('Name','Inverse PINN - Identified Parameter c');
 % C2 = colororder;
 % lineLoss2 = animatedline('Color',C2(2,:));
-% ylim([0 inf])
-% xlabel("Iteration")
-% ylabel("Identified parameter")
-% grid on
+% ylim([0 2]); xlabel('Iteration'); ylabel('Identified c'); grid on;
 % 
-% % move parameters to GPU if needed (after dlarray wrapping)
-% if (executionEnvironment == "auto" && canUseGPU) || (executionEnvironment == "gpu")
-%     for k = 1:numel(paramNames)
-%         layerName = paramNames{k};
-%         parameters.(layerName).Weights   = gpuArray(parameters.(layerName).Weights);
-%         parameters.(layerName).Bias      = gpuArray(parameters.(layerName).Bias);
-%         if isfield(parameters.(layerName),'opt_param')
-%             parameters.(layerName).opt_param = gpuArray(parameters.(layerName).opt_param);
-%         end
-%     end
-% end  % [web:6][web:43]
+% c_true = 1;
+% ndata  = 5000;
+% datapoints = lhsdesign(ndata,3);
+% tdata = Tlimit*datapoints(:,1);
+% xdata = datapoints(:,2);
+% ydata = datapoints(:,3);
 % 
-% start = tic;
-% iteration = 0;
+% noise_level = 0.02;
+% UTrue = sin(pi*xdata).*sin(pi*ydata).*cos(sqrt(2)*pi*tdata) + ...
+%         noise_level*(rand(size(tdata))-0.5);
 % 
-% loss_hist   = zeros(1,numEpochs);
-% param_conv  = zeros(1,numEpochs);
-% 
-% % ------------------ TRAINING LOOP ------------------
-% for epoch = 1:numEpochs
-%     reset(mbq);
-% 
-%     while hasdata(mbq)
-%         iteration = iteration + 1;
-% 
-%         dlXYT = next(mbq);      % size: 3 x batch, 'BC'
-%         dlX = dlXYT(1,:);
-%         dlY = dlXYT(2,:);
-%         dlT = dlXYT(3,:);
-% 
-%         % convert to 'CB'
-%         dlX = dlarray(dlX,'CB');
-%         dlY = dlarray(dlY,'CB');
-%         dlT = dlarray(dlT,'CB');
-% 
-%         if (executionEnvironment == "auto" && canUseGPU) || (executionEnvironment == "gpu")
-%             dlX = gpuArray(dlX);
-%             dlY = gpuArray(dlY);
-%             dlT = gpuArray(dlT);
-%         end
-% 
-%         % physics + inverse loss
-%         [gradients,loss] = dlfeval(@modelGradients,parameters,numLayers,dlX,dlY,dlT, ...
-%                                    t_data,x_data,y_data);  % [web:45][web:47]
-% 
-%         learningRate = initialLearnRate / (1+decayRate*iteration);
-% 
-%         [parameters,averageGrad,averageSqGrad] = adamupdate( ...
-%             parameters,gradients,averageGrad,averageSqGrad,iteration,learningRate);
-%     end
-% 
-%     lossPlot = double(gather(extractdata(loss)));
-%     addpoints(lineLoss,iteration, lossPlot);
-% 
-%     D = duration(0,0,toc(start),'Format','hh:mm:ss');
-%     title("Epoch: " + epoch + ", Elapsed: " + string(D) + ", Loss: " + lossPlot)
-%     drawnow
-% 
-%     id_param = parameters.(lastName).opt_param;
-%     loss2    = double(gather(extractdata(id_param)));
-%     addpoints(lineLoss2,iteration, loss2);
-% 
-%     D2 = duration(0,0,toc(start),'Format','hh:mm:ss');
-%     title("Epoch: " + epoch + ", Elapsed: " + string(D2) + ", Parameter: " + loss2)
-%     drawnow
-% 
-%     loss_hist(epoch)  = lossPlot;
-%     param_conv(epoch) = loss2;
-% end
-% 
-% figure(4)
-% plot(1:numEpochs,param_conv)
-% xlabel('Epoch')
-% ylabel('Identified parameter(True Value : 1')
-% 
-% % ------------------ MODEL GRADIENTS FUNCTION ------------------
-% function [gradients,loss] = modelGradients(parameters,numLayers,dlX,dlY,dlT, ...
-%                                            t_data,x_data,y_data)
-% 
-% % identification parameter
-% c_update = parameters.("fc" + numLayers).opt_param;
-% 
-% % forward at collocation points
-% U = modelU(parameters,dlX,dlY,dlT);
-% 
-% % first derivatives [web:9][web:19]
-% gradientsU = dlgradient(sum(U,'all'),{dlX,dlY,dlT},'EnableHigherDerivatives',true);
-% Ux = gradientsU{1};
-% Uy = gradientsU{2};
-% Ut = gradientsU{3};
-% 
-% % second derivatives
-% Uxx = dlgradient(sum(Ux,'all'),dlX,'EnableHigherDerivatives',true);
-% Uyy = dlgradient(sum(Uy,'all'),dlY,'EnableHigherDerivatives',true);
-% Utt = dlgradient(sum(Ut,'all'),dlT,'EnableHigherDerivatives',true);
-% 
-% % PDE residual: c*(Uxx+Uyy) - Utt = 0
-% f1 = c_update*(Uxx + Uyy) - Utt;
-% zeroTarget1 = zeros(size(f1),'like',f1);
-% lossF = mse(f1, zeroTarget1);
-% 
-% % ---------- inverse/data loss ----------
-% t_data = t_data';
-% x_data = x_data';
-% y_data = y_data';
-% 
-% noise  = 0.02*rand(size(t_data));
-% UTrue  = sin(pi*x_data).*sin(pi*y_data).*cos(sqrt(2)*pi*t_data) + noise;
-% 
-% dlTdata = dlarray(t_data,'CB');
-% dlXdata = dlarray(x_data,'CB');
-% dlYdata = dlarray(y_data,'CB');
-% 
-% if isa(dlX,'gpuArray')
+% dlTdata = dlarray(tdata);
+% dlXdata = dlarray(xdata);
+% dlYdata = dlarray(ydata);
+% dlUTrue = dlarray(UTrue);
+% if strcmp(executionEnvironment,'gpu')
 %     dlTdata = gpuArray(dlTdata);
 %     dlXdata = gpuArray(dlXdata);
 %     dlYdata = gpuArray(dlYdata);
-% end
-% 
-% UModel = modelU(parameters,dlXdata,dlYdata,dlTdata);
-% dlUTrue = dlarray(UTrue,'CB');
-% if isa(UModel,'gpuArray')
 %     dlUTrue = gpuArray(dlUTrue);
 % end
 % 
-% UDiffInv = UModel - dlUTrue;
-% zeroTargetInv = zeros(size(UDiffInv),'like',UDiffInv);
-% lossInv = mse(UDiffInv,zeroTargetInv);
+% start     = tic;
+% iteration = 0;
 % 
-% % total loss
-% loss = lossF + lossInv;
+% for epoch = 1:numEpochs
+%     reset(mbq);
+%     while hasdata(mbq)
+%         iteration = iteration + 1;
+%         batch = next(mbq);
+%         dlX   = dlarray(batch(:,1));
+%         dlY   = dlarray(batch(:,2));
+%         dlT   = dlarray(batch(:,3));
 % 
-% % gradients w.r.t all parameters including opt_param [web:45][web:9]
-% gradients = dlgradient(loss,parameters);
-% end
+%         [gradients,loss] = dlfeval(@modelGradients_InversePINN,parameters_inv,numLayers, ...
+%             dlX,dlY,dlT,dlTdata,dlXdata,dlYdata,dlUTrue);
 % 
-% % ------------------ MODEL FUNCTION ------------------
-% function dlU = modelU(parameters,dlX,dlY,dlT)
-% dlXYT = [dlX; dlY; dlT];      % 3 x batch, 'CB'
-% numLayersLocal = numel(fieldnames(parameters));
-% 
-% % first fully connected
-% weights = parameters.fc1.Weights;
-% bias    = parameters.fc1.Bias;
-% dlU = fullyconnect(dlXYT,weights,bias);
-% 
-% % remaining layers
-% for i = 2:numLayersLocal
-%     name = "fc" + i;
-%     if ~isfield(parameters.(name),'Weights')
-%         continue;   % skip opt_param-only struct field
+%         learningRate = initialLearnRate/(1 + decayRate*iteration);
+%         [parameters_inv,averageGrad,averageSqGrad] = adamupdate(parameters_inv,gradients, ...
+%             averageGrad,averageSqGrad,iteration,learningRate);
 %     end
-%     dlU = sin(dlU);
-%     weights = parameters.(name).Weights;
-%     bias    = parameters.(name).Bias;
-%     dlU = fullyconnect(dlU, weights, bias);
-% end
+% 
+%     lossVal = double(gather(extractdata(loss)));
+%     addpoints(lineLoss,iteration,lossVal);
+%     D = duration(0,0,toc(start),'Format','hh:mm:ss');
+%     title(['Epoch ',num2str(epoch),', Elapsed: ',string(D),', Loss: ',num2str(lossVal)]);
+%     drawnow;
+% 
+%     c_identified = parameters_inv.(['fc',num2str(numLayers)]).optparam;
+%     c_val        = double(gather(extractdata(c_identified)));
+%     addpoints(lineLoss2,iteration,c_val);
+%     drawnow;
 % end
 % 
-% % ------------------ INITIALIZATION HELPERS ------------------
+% fprintf('\nInverse Problem Results:\n');
+% c_final = double(gather(extractdata(parameters_inv.(['fc',num2str(numLayers)]).optparam)));
+% fprintf('True wave speed c:       %.6f\n',c_true);
+% fprintf('Identified wave speed c: %.6f\n',c_final);
+% fprintf('Error in identification: %.6f\n\n',abs(c_final-c_true));
+% 
+% fprintf('All Example 4.4 computations complete!\n');
+% 
+% %% =========================== HELPER FUNCTIONS ============================
+% 
 % function W = initializeHe(sz,numIn)
-% W = randn(sz,'single')*sqrt(2/numIn);
+%     bound = sqrt(2/numIn);
+%     W = (2*bound)*rand(sz) - bound;
 % end
 % 
-% function B = initializeZeros(sz)
-% B = zeros(sz,'single');
+% function Z = initializeZeros(sz)
+%     Z = zeros(sz);
+% end
+% 
+% %% MODEL: Conventional PINN  (X = [dlX dlY dlT], all unformatted)
+% function dlU = modelU_ConvPINN(parameters,dlX,dlY,dlT)
+%     X = [dlX dlY dlT];            % N x 3
+%     numLayers = numel(fieldnames(parameters));
+% 
+%     W = parameters.fc1.Weights;
+%     B = parameters.fc1.Bias;
+%     dlU = fullyconnect(X,W,B);    % N x numNeurons
+% 
+%     for i = 2:numLayers
+%         dlU = tanh(dlU);
+%         name = ['fc',num2str(i)];
+%         W = parameters.(name).Weights;
+%         B = parameters.(name).Bias;
+%         dlU = fullyconnect(dlU,W,B); % last: N x 1
+%     end
+% end
+% 
+% %% MODEL: Modified output PINN
+% function dlU = modelU_ModifiedPINN(parameters,dlX,dlY,dlT)
+%     X = [dlX dlY dlT];  % N x 3
+%     numLayers = numel(fieldnames(parameters));
+% 
+%     W = parameters.fc1.Weights;
+%     B = parameters.fc1.Bias;
+%     net = fullyconnect(X,W,B);
+% 
+%     for i = 2:numLayers
+%         net = tanh(net);
+%         name = ['fc',num2str(i)];
+%         W = parameters.(name).Weights;
+%         B = parameters.(name).Bias;
+%         net = fullyconnect(net,W,B);
+%     end
+% 
+%     x = dlX; y = dlY; t = dlT;
+%     dlU = net .* (t.^2) .* (x.*(1-x)) .* (y.*(1-y)) .* sin(pi*x).*sin(pi*y);
+% end
+% 
+% %% MODEL: Inverse PINN (network only; c is separate parameter)
+% function dlU = modelU_InversePINN(parameters,dlX,dlY,dlT)
+%     X = [dlX dlY dlT];  % N x 3
+% 
+%     fn = fieldnames(parameters);
+%     numLayers = 0;
+%     for k = 1:numel(fn)
+%         if startsWith(fn{k},'fc') && isfield(parameters.(fn{k}),'Weights')
+%             numLayers = numLayers + 1;
+%         end
+%     end
+% 
+%     W = parameters.fc1.Weights;
+%     B = parameters.fc1.Bias;
+%     dlU = fullyconnect(X,W,B);
+% 
+%     for i = 2:numLayers
+%         dlU = tanh(dlU);
+%         name = ['fc',num2str(i)];
+%         W = parameters.(name).Weights;
+%         B = parameters.(name).Bias;
+%         dlU = fullyconnect(dlU,W,B);
+%     end
+% end
+% 
+% %% GRADIENT: Conventional PINN
+% function [gradients,loss] = modelGradients_ConvPINN(parameters,dlX,dlY,dlT, ...
+%     dlX0IC,dlY0IC,dlT0IC,dlU0IC, ...
+%     dlX0BC1,dlY0BC1,dlT0BC1, ...
+%     dlX0BC2,dlY0BC2,dlT0BC2, ...
+%     dlX0BC3,dlY0BC3,dlT0BC3, ...
+%     dlX0BC4,dlY0BC4,dlT0BC4,c)
+% 
+%     U = modelU_ConvPINN(parameters,dlX,dlY,dlT);   % N x 1
+% 
+%     g = dlgradient(sum(U,'all'),{dlX,dlY,dlT},'EnableHigherDerivatives',true);
+%     Ux = g{1};
+%     Uy = g{2};
+%     Ut = g{3};
+% 
+%     Uxx = dlgradient(sum(Ux,'all'),dlX,'EnableHigherDerivatives',true);
+%     Uyy = dlgradient(sum(Uy,'all'),dlY,'EnableHigherDerivatives',true);
+%     Utt = dlgradient(sum(Ut,'all'),dlT,'EnableHigherDerivatives',true);
+% 
+%     f1    = c^2*(Uxx + Uyy) - Utt;
+%     lossF = mse(f1,zeros(size(f1),'like',f1));
+% 
+%     % IC
+%     U0Pred   = modelU_ConvPINN(parameters,dlX0IC,dlY0IC,dlT0IC);
+%     lossU0IC = mse(U0Pred,dlU0IC);
+% 
+%     U0dot    = dlgradient(sum(U0Pred,'all'),dlT0IC,'EnableHigherDerivatives',true);
+%     lossUdot = mse(U0dot,zeros(size(U0dot),'like',U0dot));
+% 
+%     % BCs
+%     U0BC1 = modelU_ConvPINN(parameters,dlX0BC1,dlY0BC1,dlT0BC1);
+%     U0BC2 = modelU_ConvPINN(parameters,dlX0BC2,dlY0BC2,dlT0BC2);
+%     U0BC3 = modelU_ConvPINN(parameters,dlX0BC3,dlY0BC3,dlT0BC3);
+%     U0BC4 = modelU_ConvPINN(parameters,dlX0BC4,dlY0BC4,dlT0BC4);
+% 
+%     lossBC1 = mse(U0BC1,zeros(size(U0BC1),'like',U0BC1));
+%     lossBC2 = mse(U0BC2,zeros(size(U0BC2),'like',U0BC2));
+%     lossBC3 = mse(U0BC3,zeros(size(U0BC3),'like',U0BC3));
+%     lossBC4 = mse(U0BC4,zeros(size(U0BC4),'like',U0BC4));
+% 
+%     lossU = lossU0IC + lossUdot + lossBC1 + lossBC2 + lossBC3 + lossBC4;
+% 
+%     loss      = lossF + lossU;
+%     gradients = dlgradient(loss,parameters);
+% end
+% 
+% %% GRADIENT: Modified PINN
+% function [gradients,loss] = modelGradients_ModifiedPINN(parameters,dlX,dlY,dlT,c)
+%     U = modelU_ModifiedPINN(parameters,dlX,dlY,dlT);
+% 
+%     g = dlgradient(sum(U,'all'),{dlX,dlY,dlT},'EnableHigherDerivatives',true);
+%     Ux = g{1};
+%     Uy = g{2};
+%     Ut = g{3};
+% 
+%     Uxx = dlgradient(sum(Ux,'all'),dlX,'EnableHigherDerivatives',true);
+%     Uyy = dlgradient(sum(Uy,'all'),dlY,'EnableHigherDerivatives',true);
+%     Utt = dlgradient(sum(Ut,'all'),dlT,'EnableHigherDerivatives',true);
+% 
+%     f1  = c^2*(Uxx + Uyy) - Utt;
+%     loss = mse(f1,zeros(size(f1),'like',f1));
+% 
+%     gradients = dlgradient(loss,parameters);
+% end
+% 
+% %% GRADIENT: Inverse PINN
+% function [gradients,loss] = modelGradients_InversePINN(parameters,numLayers, ...
+%     dlX,dlY,dlT,dlTdata,dlXdata,dlYdata,dlUTrue)
+% 
+%     c_update = parameters.(['fc',num2str(numLayers)]).optparam;
+% 
+%     U = modelU_InversePINN(parameters,dlX,dlY,dlT);
+% 
+%     g = dlgradient(sum(U,'all'),{dlX,dlY,dlT},'EnableHigherDerivatives',true);
+%     Ux = g{1};
+%     Uy = g{2};
+%     Ut = g{3};
+% 
+%     Uxx = dlgradient(sum(Ux,'all'),dlX,'EnableHigherDerivatives',true);
+%     Uyy = dlgradient(sum(Uy,'all'),dlY,'EnableHigherDerivatives',true);
+%     Utt = dlgradient(sum(Ut,'all'),dlT,'EnableHigherDerivatives',true);
+% 
+%     f1    = c_update^2*(Uxx + Uyy) - Utt;
+%     lossF = mse(f1,zeros(size(f1),'like',f1));
+% 
+%     UModel = modelU_InversePINN(parameters,dlXdata,dlYdata,dlTdata);
+%     UDiff  = UModel - dlUTrue;
+%     lossInv = mse(UDiff,zeros(size(UDiff),'like',UDiff));
+% 
+%     loss      = lossF + lossInv;
+%     gradients = dlgradient(loss,parameters);
 % end
