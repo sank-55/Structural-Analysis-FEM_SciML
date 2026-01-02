@@ -1,4 +1,4 @@
-<h> This are the plots  of the 'dof5_DEKF.m' matlab file 
+<h> These are the plots  of the 'dof5_DEKF.m' matlab file 
 # plot of displacement vs time 
 
 <img width="1124" height="279" alt="Screenshot 2026-01-02 182251" src="https://github.com/user-attachments/assets/52382f9b-d603-4980-b836-dce7e3eca4f8" />
