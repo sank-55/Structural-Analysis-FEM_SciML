@@ -1,6 +1,5 @@
 %% This code represent the SSSS plate using only one mode to prediction of the damage factor 
 
-
 %% Plate using dual kalman filter 
 
 clear; close all; clc;
@@ -253,7 +252,7 @@ load_time_func = sin(2*pi*linspace(0.2,4, nt+1));
 % Apply load only for the first 0.1s (Impulse-like) if desired, or constant:
 % load_time_func(time > 0.1) = 0; 
 %% Acting progressive damage factor 
-fd = linspace(0,0.2,nt+1);
+fd = linspace(0,0.8,nt+1);
 % 3. Newmark-Beta Constants (Average Acceleration Method: Unconditionally Stable)
 gamma = 0.5;
 beta = 0.25;
@@ -370,20 +369,20 @@ x_state = zeros(2*modes,1); % initial state
 fd_param = fd(:,1); % initial damage factor 
 
 % ADDING NOISE to measured value
-noise_a = 1e-4;
-noise_u = 1e-4;
-noise_v = 1e-4;
+noise_a = 1e-8;
+noise_u = 1e-8;
+noise_v = 1e-8;
 
 % Initialize the state covariance matrix and process noise covariance
-Px = 1e-8*eye(2*modes); % State covariance matrix
-Qx = 1e-8 * eye(2*modes); % Process noise covariance
-Pfd = 1e-12*eye(params);
-Qfd = 1e-12*eye(params);
+Px = 1e-5*eye(2*modes); % State covariance matrix
+Qx = 1e-6 * eye(2*modes); % Process noise covariance
+Pfd = 1e-5*eye(params);
+Qfd = 1e-5*eye(params);
 
 R_u = 1e-6 * eye(params);
 R_v = 1e-6 * eye(params);
 Rx = blkdiag(R_u, R_v);           % measurement covariance for u and v (2*Ns x 2*Ns)
-Rfd = 3e-7 * eye(params); 
+Rfd = 1e-4 * eye(params); 
 
 % store the solution for future use 
 u_dkf_hist = zeros(Ns,nt+1);
@@ -538,4 +537,3 @@ title(['Damage detection  ' num2str(sensorNode(1))]);
 xlabel('Time (s)');
 ylabel('damage Factor');
 xlim([0, T_total]);
-
