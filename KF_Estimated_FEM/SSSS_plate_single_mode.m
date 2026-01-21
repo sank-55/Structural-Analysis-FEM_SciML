@@ -1,5 +1,5 @@
 %% This code represent the SSSS plate using only one mode to prediction of the damage factor 
-
+%% It uses all ekf algo to chooose which acts the best and how , but the ekf is  not good  
 %% Plate using dual kalman filter 
 
 clear; close all; clc;
@@ -366,35 +366,76 @@ Phi_sen = S * Phi_modal;   % size Ns x modes
 %% ------- Now the Time for DEKF ----------------------
 params = Ns;
 x_state = zeros(2*modes,1); % initial state
-fd_param = fd(:,1); % initial damage factor 
+x_state_ = zeros(2*modes,1);
 
+x_state__ = zeros(2*modes,1); % FOR ekf 
+
+x_ekf = zeros(2*modes+params,1);
+
+fd_param = fd(:,1); % initial damage factor 
+fd_param_ = fd(:,1); 
+fd_param__ = fd(:,1);
 % ADDING NOISE to measured value
 noise_a = 1e-8;
 noise_u = 1e-8;
 noise_v = 1e-8;
 
 % Initialize the state covariance matrix and process noise covariance
-Px = 1e-5*eye(2*modes); % State covariance matrix
-Qx = 1e-6 * eye(2*modes); % Process noise covariance
-Pfd = 1e-5*eye(params);
-Qfd = 1e-5*eye(params);
+Px = 1e-2*eye(2*modes); % State covariance matrix
+Px_ = Px; 
+
+Qx = 1e-2 * eye(2*modes); % Process noise covariance
+
+Pfd = 7e-12*eye(params);
+Qfd = 7e-10*eye(params);
+Pfd_ = Pfd;
+
+% for ekf 
+P__ = 1e-22*eye(2*modes+params);
+Q__ = 1e-22*eye(2*modes+params);
 
 R_u = 1e-6 * eye(params);
 R_v = 1e-6 * eye(params);
 Rx = blkdiag(R_u, R_v);           % measurement covariance for u and v (2*Ns x 2*Ns)
-Rfd = 1e-4 * eye(params); 
+Rfd = 1e-5 * eye(params); 
+% for EKF
+R__ = [1e-2*eye(params); 1e-2*eye(params);1e-2*eye(params)];
 
 % store the solution for future use 
 u_dkf_hist = zeros(Ns,nt+1);
 v_dkf_hist = zeros(Ns,nt+1);  % contains only the sensor's states 
 a_dkf_hist = zeros(Ns, nt+1);
 a_dkf_hist_state = zeros(Ns, nt+1);
-
 x_state_hist = zeros(2*modes,nt+1);
 fd_est_hist = zeros(params,nt+1);
+
+% for scheme normal
+u_dkf_hist_ = zeros(Ns,nt+1);
+v_dkf_hist_ = zeros(Ns,nt+1);  % contains only the sensor's states 
+a_dkf_hist_ = zeros(Ns, nt+1);
+a_dkf_hist_state_ = zeros(Ns, nt+1);
+x_state_hist_ = zeros(2*modes,nt+1);
+fd_est_hist_ = zeros(params,nt+1);
+
+% For EKf
+u_dkf_hist__ = zeros(Ns,nt+1);
+v_dkf_hist__ = zeros(Ns,nt+1);  % contains only the sensor's states 
+a_dkf_hist__ = zeros(Ns, nt+1);
+a_dkf_hist_state__ = zeros(Ns, nt+1);
+x_state_hist__ = zeros(2*modes,nt+1);
+fd_est_hist__ = zeros(params,nt+1); % for only ekf 
+
+
 % Initialize state history
 x_state_hist(:, 1) = x_state;
 fd_est_hist(:, 1) = fd_param;
+
+x_state_hist_(:, 1) = x_state_;
+fd_est_hist_(:, 1) = fd_param_;
+
+x_ekf= [x_state__;fd_param__];
+x_state_hist__(:, 1) = x_state__;
+fd_est_hist__(:, 1) = fd_param__;
 
 
 % starting the loop 
@@ -409,13 +450,23 @@ for i=1:nt
     for z = 1:Nz
         K_dkf_modal = K_dkf_modal + (1 - fd_param(z)) * Kz_modal_red{z};
     end
+    K_dkf_modal_ = zeros(modes,modes);
+    for z = 1:Nz
+        K_dkf_modal_ = K_dkf_modal_ + (1 - fd_param_(z)) * Kz_modal_red{z};
+    end
+
+    
 
 
      a_dkf_prev =  M_modal_red \ (F_t - K_dkf_modal*x_state(1:modes) - C_modal_red*x_state(modes+1:end));
+    a_dkf_prev_ =  M_modal_red \ (F_t - K_dkf_modal_*x_state_(1:modes) - C_modal_red*x_state_(modes+1:end));
 
      % random walk prediction
      fd_pred = fd_param + 1e-8;
      Pfd_pred = Pfd + Qfd;
+     % for normal 
+     fd_pred_ = fd_param_ + 1e-8;
+     Pfd_pred_ = Pfd_ + Qfd;
     
      %now using predicted Fd
       K_dkf_modal = zeros(modes,modes);
@@ -425,11 +476,14 @@ for i=1:nt
 
 
      H_fd = zeros(Ns, params);
+     H_fd_ = zeros(Ns, params);
     for z = 1:params
         % derivative: S * M^{-1} * Kz * u
         % using modal: Phi_sen * (M_modal_red \ (Kz_modal_red{z} * q_pred))
         tmp = (M_modal_red + dt*0.5*C_modal_red + dt^2*0.25*K_dkf_modal)\ (Kz_modal_red{z} * (x_state(1:modes) + dt*x_state(modes+1:end) + dt^2*0.25*a_dkf_prev));    % modes x 1
-        H_fd(:, z) = Phi_sen * tmp;                        % Ns x 1
+        temp = (M_modal_red)\ (Kz_modal_red{z} * (x_state_(1:modes)));  
+        H_fd(:, z) = Phi_sen * tmp; 
+        H_fd_(:,z) = Phi_sen*temp; % Ns x 1
     end
     % using the Eulerian scheme
     
@@ -438,30 +492,63 @@ for i=1:nt
     a_dkf_hist(:,i+1) = Phi_sen*a_dkf_pred;
     % Updation part 
     z_accn_diff = a_meas - Phi_sen*a_dkf_pred;
-
+    z_accn_diff_ = a_meas - Phi_sen*a_dkf_prev_;
       % update parameters using EKF formula
     S_fd = H_fd * Pfd_pred * H_fd' + Rfd;
     S_fd = S_fd + 1e-12 * eye(size(S_fd));  % regularize
     K_fd = (Pfd_pred * H_fd') / S_fd;      % Nz x Ns
 
+    S_fd_ = H_fd_ * Pfd_pred_ * H_fd_' + Rfd;
+    S_fd_ = S_fd_ + 1e-12 * eye(size(S_fd_));  % regularize
+    K_fd_ = (Pfd_pred_ * H_fd_') / S_fd_;      % Nz x Ns
+
     fd_upd = fd_pred + K_fd * z_accn_diff;
+    fd_upd_ = fd_pred_ + K_fd_ * z_accn_diff_;
     % enforce physical bounds and remove NaNs
     fd_upd = real(fd_upd);                  % remove tiny imaginary parts
     fd_upd(isnan(fd_upd)) = 0;              % safety
     fd_upd = max(0, min(0.99, fd_upd));     % clamp to [0,0.99]
+    % for normal
+    fd_upd_ = real(fd_upd_);                  % remove tiny imaginary parts
+    fd_upd_(isnan(fd_upd_)) = 0;              % safety
+    fd_upd_ = max(0, min(0.99, fd_upd_));     % clamp to [0,0.99]
+
+
 
     Pfd = (eye(modes) - K_fd * H_fd) * Pfd_pred;
-
+    
     fd_param = fd_upd;
     fd_est_hist(:, i+1) = fd_param;
+% for noraml scheme 
+    Pfd_ = (eye(modes) - K_fd_ * H_fd_) * Pfd_pred_;
+
+    fd_param_ = fd_upd_;
+    fd_est_hist_(:, i+1) = fd_param_;
 
     %% Now for coupling with the states 
     % state will be updated for the next step (i+1) 
     Ft_plus = F_modal_red*load_time_func(i+1); 
+
+    % % break into two vector for the ekf 
+    % x_state__  = x_ekf(1:2*modes,1);
+    % fd_param__ = x_ekf(2*modes+1:end,1);
+
      K_dkf_modal = zeros(modes,modes);
     for z = 1:Nz
         K_dkf_modal = K_dkf_modal + (1 - fd_param(z)) * Kz_modal_red{z};
     end
+ % for normal scheme 
+ K_dkf_modal_ = zeros(modes,modes);
+    for z = 1:Nz
+        K_dkf_modal_ = K_dkf_modal_ + (1 - fd_param_(z)) * Kz_modal_red{z};
+    end
+
+    % for ekf
+    K_dkf_modal__ = zeros(modes,modes);
+    for z = 1:Nz
+        K_dkf_modal__ = K_dkf_modal__ + (1 - x_ekf(2*modes+z)) * Kz_modal_red{z};
+    end
+
 
      % Continuous-time modal A_cont (correct sign)
     A_cont = [ zeros(modes), eye(modes);
@@ -476,27 +563,125 @@ for i=1:nt
     Ad = E(1:nA, 1:nA);
     Bd = E(1:nA, nA+1:end);
 
+    % for normal 
+     A_cont_ = [ zeros(modes), eye(modes);
+              - (M_modal_red \ K_dkf_modal_),  - (M_modal_red \ C_modal_red) ];  % 2m x 2m
+
+    % Continuous-time B_cont maps modal force (F_modal_red) into states
+    B_cont_ = [ zeros(modes); (M_modal_red \ eye(modes)) ];   % 2m x m
+    % Discretize (exact) using matrix exponential on augmented matrix
+    nA = 2*modes;
+    Mbig_ = [A_cont_, B_cont_; zeros(modes, nA), zeros(modes)];
+    E_ = expm(Mbig_*dt);
+    Ad_ = E(1:nA, 1:nA);
+    Bd_ = E(1:nA, nA+1:end);
+
+    % for EKF ----- there is different approach 
+
+    A_fd__ = zeros(modes,params);
+    for z=1:params
+        A_fd__(:,z) = (M_modal_red)\ (Kz_modal_red{z} *x_ekf(1:modes));
+    end
+
+    A_cont__ = [ zeros(modes), eye(modes), zeros(modes,params);
+              - (M_modal_red \ K_dkf_modal__),  - (M_modal_red \ C_modal_red),  A_fd__ ;
+                 zeros(params,modes), zeros(params,modes), eye(params,params) ];  % 2m x 2m
+
+    % Continuous-time B_cont maps modal force (F_modal_red) into states
+    B_cont__ = [ zeros(modes); (M_modal_red \ eye(modes)); zeros(params,modes) ];   % 2m+p x m
+    % Discretize (exact) using matrix exponential on augmented matrix
+    nA_ = 2*modes+params;
+    Mbig__ = [A_cont__, B_cont__ ; zeros(modes, nA_), zeros(modes,modes)];
+    E__ = expm(Mbig__*dt);
+    Ad__ = E__(1:nA_, 1:nA_);
+    Bd__ = E__(1:nA_, nA_+1:end);
+
+
+    % Ad__ = [ zeros(modes), dt*eye(modes), zeros(modes,params);
+    %           - dt*(M_modal_red \ K_dkf_modal__),  eye(modes) - dt*(M_modal_red \ C_modal_red),  dt*A_fd__ ;
+    %              zeros(params,modes), zeros(params,modes), eye(params,params) ];
+
     % predict
     x_pred = Ad * x_state + Bd * Ft_plus;
     Px_pred = Ad * Px * Ad' + Qx;
 
+     x_pred_ = Ad_ * x_state_ + Bd_ * Ft_plus;
+    Px_pred_ = Ad_ * Px_ * Ad_' + Qx;
+
+    x_ekf_pred = Ad__ * x_ekf + Bd__ * Ft_plus;
+    P_pred__ = Ad__ * P__ * Ad__' + Q__;
+
     % updation of the states 
     Hx = [Phi_sen, zeros(Ns, modes); zeros(Ns, modes), Phi_sen];  % 2Ns x 2m
 
+    % Measurement matrix for the Ekf is only for the acceleration 
+      K_dkf_modal__ = zeros(modes,modes);
+    for z = 1:Nz
+        K_dkf_modal__ = K_dkf_modal__ + (1 - x_ekf_pred(2*modes+z)) * Kz_modal_red{z};
+    end
+    a_ekf_pred = Phi_sen*(M_modal_red \ (Ft_plus - K_dkf_modal__*x_ekf_pred(1:modes) - C_modal_red*x_ekf_pred(modes+1:2*modes)))  ;
+    
+    
+    A_fds__ = zeros(modes,params);
+    for z=1:params
+        A_fds__(:,z) =  (Kz_modal_red{z} *x_ekf_pred(1:modes));
+    end
+    
+    H_ekf = Phi_sen *[    eye(modes,modes) ,  zeros(modes,modes) , zeros(modes,modes);
+                            zeros(modes,modes) , eye(modes,modes),  zeros(modes,modes) ;
+                        -(M_modal_red^-1)*K_dkf_modal__*x_ekf_pred(1:modes) ,  -(M_modal_red^-1)*C_modal_red*x_ekf_pred(modes+1:2*modes) ,  (M_modal_red^-1)* A_fds__ ];
+
+
+    z_ekf_diff =[u_meas;v_meas; a_meas] - [x_ekf_pred(1:modes); x_ekf_pred(modes+1:2*modes); a_ekf_pred] ;
+
+
     Z_uv = [u_meas; v_meas];    % 2Ns x 1
     z_uv_diff = Z_uv - Hx * x_pred;
+    z_uv_diff_ = Z_uv - Hx * x_pred_;
+
 
     Sx = Hx * Px_pred * Hx' + Rx;
     % regularize Sx to avoid singularity
     Sx = Sx + 1e-12 * eye(size(Sx));
     Kx = (Px_pred * Hx') / Sx;       % 2m x 2Ns
 
+    Sx_ = Hx * Px_pred_ * Hx' + Rx;
+    % regularize Sx to avoid singularity
+    Sx_ = Sx_ + 1e-12 * eye(size(Sx_));
+    Kx_ = (Px_pred_ * Hx') / Sx_;  
+
+    % for ekf 
+    S__ = H_ekf * P__ * H_ekf' + [ R__];
+    % regularize Sx to avoid singularity
+    S__ = S__ + 1e-12 * eye(size(S__));
+    K__ = (P_pred__ * H_ekf') / S__;  
+
     x_upd = x_pred + Kx * z_uv_diff;
     Px = (eye(2*modes) - Kx * Hx) * Px_pred;
+
+      x_upd_ = x_pred_ + Kx_ * z_uv_diff_;
+    Px_ = (eye(2*modes) - Kx_ * Hx) * Px_pred_;
+
+    % for ekf
+    x_upd__ = x_ekf_pred + K__ * z_ekf_diff;
+    P__ = (eye(2*modes+params) - K__ * H_ekf) * P_pred__;
+
 
     x_state = x_upd;
     x_state_hist(:, i+1) = x_state;
     u_dkf_hist(:,i+1) = Phi_sen*x_state(1:modes);
+
+    x_state_ = x_upd_;
+    x_state_hist_(:, i+1) = x_state_;
+    u_dkf_hist_(:,i+1) = Phi_sen*x_state_(1:modes);
+
+    x_ekf = x_upd__;
+     x_state__  = x_ekf(1:2*modes,1);
+    fd_param__ = x_ekf(2*modes+1:end,1);
+
+    x_state_hist__(:, i+1) = x_state__;
+    u_dkf_hist__(:,i+1) = Phi_sen*x_state__(1:modes);
+    fd_est_hist__(:,i+1) = fd_param__;
 
     a_dkf_hist_state(:,i+1) = Phi_sen* (M_modal_red \ (Ft_plus - K_dkf_modal*x_state(1:modes) - C_modal_red*x_state(modes+1:end)) ) ;   
 
@@ -510,7 +695,9 @@ end
 %% ================== PLOTTING RESPONSE =====================
 figure('Name', 'Time History Response');
 plot(time, sensor_disp_history_true, 'k-', 'LineWidth', 1.5); hold on;
-plot(time, u_dkf_hist, 'b--', 'LineWidth', 1.5);
+plot(time, u_dkf_hist, 'r*-', 'LineWidth', 1.5);
+plot(time, u_dkf_hist_, 'b--', 'LineWidth', 1.5);
+plot(time, u_dkf_hist__, 'g*-', 'LineWidth', 1.5);
 grid on;
 title(['Vertical Displacement at Sensor Node ' num2str(sensorNode(1))]); 
 xlabel('Time (s)');
@@ -531,9 +718,12 @@ xlim([0, T_total]);
 % for damage detection plot
 figure('Name', ' Prgressive Damage Response');
 plot(time, fd, 'k-', 'LineWidth', 1.5); hold on;
-plot(time, fd_est_hist, 'b--', 'LineWidth', 1.5);
+plot(time, fd_est_hist, 'r--', 'LineWidth', 1.5);
+plot(time, fd_est_hist_, 'b--', 'LineWidth', 1.5);
+plot(time, fd_est_hist__, 'g--', 'LineWidth', 1.5);
 grid on;
 title(['Damage detection  ' num2str(sensorNode(1))]);
 xlabel('Time (s)');
 ylabel('damage Factor');
 xlim([0, T_total]);
+
