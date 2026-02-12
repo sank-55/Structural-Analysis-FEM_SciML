@@ -1,5 +1,5 @@
 %%INITTIAL
-
+%%fist three damages predicted when using o damage then the 5th one not the 6th
 clear; close all; clc;
 syms x y
 
