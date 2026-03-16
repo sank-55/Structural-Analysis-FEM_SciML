@@ -22,7 +22,7 @@ w_1 = 1*137.2892;
 w_6 =  897.6603; 
 
 N = 5000;
-deltat = 0.00001;
+deltat = 0.00005;
 nObserv= 5 ;       % No of observable zones ( sensor is acting) 
 
 syms x y
@@ -60,6 +60,8 @@ damdoy=[0 b/2;0 b/2;0 b/2;b/2 b;b/2 b;b/2 b];
  % sensox=[a/6 a/2 5*a/6  a/6  5*a/6   a/2 ];
  % sensoy=[b/4 b/4 b/4  3*b/4  3*b/4  b/2 ];
 
+
+ % Effective for 5 sensor location 
  sensox=[  a/6   5*a/6   1*a/6   5*a/6    a/2   ];
  sensoy=[   b/4   b/4    3*b/4    3*b/4    b/2 ];
 
@@ -279,6 +281,7 @@ accp=zeros(Nm,1);
    xrip=zeros(Nm,1);
    vrip=zeros(Nm,1);
    accpri=zeros(Nm,1);
+xx_true_store = zeros(Nm,N);   
 xx_store_dkf = zeros(2*Nm,N);
 xx_store_dkf2 = zeros(2*Nm,N);
 xx_store_ekf = zeros(2*Nm,N);
@@ -337,6 +340,8 @@ AAinv=inv(AA);
         
         xri(j)=xrip(j)+(vrip(j)+vri(j))/2*deltat;
     end
+
+    xx_true_store(:,i) = xri';
     
     xrri=Phi*xri';
     vrri=Phi*vri';
@@ -590,7 +595,7 @@ Bx2=Bx2_*Bdkf2*deltat;
 
 
 % ----- For extended kalman filter 
-    Aex =  deltat*Aex+eye(2*Nm + Ndam);
+    Aex =  deltat*Aex + eye(2*Nm + Ndam);
     Bex=deltat*Bex;
 
     Ax=zeros(2*Nm+Ndam,2*Nm+Ndam);
@@ -645,6 +650,7 @@ Bx2=Bx2_*Bdkf2*deltat;
     Pn=A*P*transpose(A)+Q;    
     K=Pn*transpose(H)*inv((H*Pn*transpose(H))+R);
     xx=xx+K*(z'-H*xx);    
+    xx_store_dkf(:,i)=xx;
     vv=(xx(1:Nn)-xxp(1:Nn))/deltat;
     aa=(vv(1:Nn)-vvp(1:Nn))/deltat;
     FF=Mgm*aa(:)+Cgc*vv(:)+Kgk*xx(1:Nn);
@@ -755,6 +761,8 @@ for i=1:6
 end
 
 
+
+
 %% For the The observability matrix 
 
 dt=0.00001;       % time step
@@ -843,15 +851,19 @@ ylabel('Normalized observability');
 title('Zone-wise damage observability');
 grid on;
 
+% PLOTTING THE STATES  
+
 figure(5);
-    for i =1:Nm
-        subplot(3,3,i);
-        plot(linspace(0,deltat*N,N),q(i,:));
+  for i =1:Nm
+        subplot(2,3,i);
+        plot(linspace(0,deltat*N,N),xx_true_store(i,:),'k-'); hold on;
+        plot(linspace(0,deltat*N,N),xx_store_dkf2(i,:),'m--');  hold on;
+        plot(linspace(0,deltat*N,N),xx_store_dkf(i,:),'b--');
         xlabel('time');
         ylabel('displacement');
-        title('disp(undam)vs time');
+        title('disp(damage) vs time');
 
-    end
+  end
 
 
 %% Plotting the observation matrix 
