@@ -1328,7 +1328,7 @@ end
 %     title(['Zone ', num2str(i)]); ylim([-0.1 0.5]);
 % end
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 5s 6 dam
@@ -1337,7 +1337,7 @@ end
 
 
 clear all
-syms tau
+
 p=1000;
 ro=2700; % ( in kg/m3)
 yo =70*10^9;%youngs modulus
@@ -1353,7 +1353,7 @@ divy=3;  %input(' enter the no of divisions on the length ');
 ey=b/(divy);
 %% Natural frequencies for the above 
 %% NB: when frequencies are around 8,9 w1 we find scheme 2 is better than the other model
-w_1 = 45*pi; %1*137.2892;
+w_1 = 100*pi; %1*137.2892;
 w_6 =  897.6603; 
 
 N = 5000;
@@ -1532,13 +1532,13 @@ Haf=Phi;
 %Pdkf2= 1e-5*((3.8302e-61)^-1)*blkdiag( 1.3047e-65,2.6293e-69, 3.4802e-66, 2.8268e-70, 1.6648e-73,6.9442e-69 , 3.2971e-61 , 6.7527e-66, 3.8364e-61, 3.1618e-65, 5.8148e-70, 1.1854e-63); % for 6 sensor and usual mode shapes
 
 %Pf=eye(Ndam)*10000;  % BEST AT 10000 
-%Pf = 1e-12*blkdiag( 0.4085  , 0.5170 ,0.6002, 0.7599 0.5322,0.6306);% for 6 sensor scheme 1;
-% Pf2 = 1e-12*blkdiag(0.4104 ,0.5188 , 0.6028, 0.7630 , 0.5344, 0.6334); % for 6 sensor scheme 2
+Pf = 1e-8*blkdiag( 0.1073  , 0.0543 , 0.1287,0.1229,  0.0521 , 0.1145);% for 6 sensor scheme 1;
+Pf2 = 1e-8*blkdiag(0.1077 , 0.0544 ,0.1292, 0.1234 ,  0.0522,  0.1149); % for 6 sensor scheme 2
 
 
-% --- 5 sensor based 6 Ndam --------- 
-Pf = 1e-11*blkdiag(0.4169,0.5205 ,0.6138,0.7764, 0.5272, 0.6443); % for 4 sensor 
-Pf2 = 1e-11*blkdiag(0.4187,0.5214, 0.6163,0.7793, 0.5287 , 0.64694);
+% % --- 5 sensor based 6 Ndam  45 pi freq --------- 
+% Pf = 1e-11*blkdiag(0.4169,0.5205 ,0.6138,0.7764, 0.5272, 0.6443); % for 4 sensor 
+% Pf2 = 1e-11*blkdiag(0.4187,0.5214, 0.6163,0.7793, 0.5287 , 0.64694);
 
 
  Q=eye(dim)/10^-10;  %  % scheme 1 -> eye(dim)/10^-10 for 6 sensor (unchange modes)
@@ -1569,8 +1569,8 @@ Qf2 = 1e0*Pf2; %    % 1e1*blkdiag(0.0999,0.2832,0.7140 ,0.1923,0.2298,0.2095);
 % R=cov(erR')*10000000;
 % Rf=cov(erf')*10000000;
 R=1*eye(2*nObserv)*10^(-5);  % for state ( disp & vel) of Scheme - 1 for 6 sen ->1*eye(2*nObserv)*10^(-4) works better ( no noise)  
-Rf=1*eye(nObserv)*10^(-0.2);
-Rf2=1*eye(nObserv)*10^(-0.2);
+Rf=1*eye(nObserv)*10^(0);
+Rf2=1*eye(nObserv)*10^(0);
 %Rf = 1e-2*blkdiag(0.2524, 0.4019,0.8427,0.4211);
 
 Rdkf2=1*eye(2*nObserv)*10^(-5); % for state ( disp & vel) of Scheme - 2
@@ -2205,4 +2205,3 @@ for i =1:18
     P_ekf(i)
     %P2_s1(i)
 end
-
