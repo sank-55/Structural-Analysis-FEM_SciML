@@ -14,13 +14,13 @@ a=0.6; %( m)
 b=0.4; % (m)
 divx = 3;  %input(' enter the no of divisions on the breadth ');
 % ex=length of element in x direction
-ex=a/(divx);
+ex =a/(divx);
 divy=3;  %input(' enter the no of divisions on the length ');
 % ey=length of element in y direction
-ey=b/(divy);
+ey =b/(divy);
 %% Natural frequencies for the above 
 %% NB: when frequencies are around 8,9 w1 we find scheme 2 is better than the other model
-w_1 = 45*pi;   %1*137.2892;
+w_1 = 100*pi;   %1*137.2892;
 w_6 =  897.6603; 
 
 N = 50000;
@@ -61,11 +61,11 @@ damdoy=[0 b/2;0 b/2;0 b/2;b/2 b;b/2 b;b/2 b];
  % sensoy=[b/4 b/4 b/4  3*b/4  3*b/4  b/2 ];
 
 
- % Effective for 5 sensor location 
-    sensox = [0.2949  0.1627  0.4271  0.1525  0.4475 ];
-    sensoy = [ 0.1949 0.1026  0.1026  0.2769  0.2769 ];
-%  sensox=[  a/6   5*a/6   1*a/6   5*a/6    a/2   ];
-%  sensoy=[   b/4   b/4    3*b/4    3*b/4    b/2 ];
+% %  % Effective for 5 sensor location 
+%     sensox = [0.2949  0.1627  0.4271  0.1525   ];
+%     sensoy = [ 0.1949 0.1026  0.1026  0.2769  ];
+ sensox=[  a/6   5*a/6   1*a/6   5*a/6   a/2  ];
+ sensoy=[   b/4   b/4    3*b/4    3*b/4   b/2 ];
 
 
 for i=1:Nm
@@ -202,11 +202,11 @@ dimf=1;
 %Pekf = 1e-10*eye(2*Nm + Ndam);  %working well in 6s (usual modes) 
 %Pekf = 1e6*blkdiag(3.3898e-15,3.8276e-17, 2.4722e-16, 1.3198e-17, 1.8844e-18,2.3570e-17, 3.4714e-08 ,3.8733e-10, 2.5383e-09,  1.3562e-10, 1.8996e-11, 2.4181e-10, 1.9583e-13, 1.3443e-13 ,  2.0059e-13, 1.9658e-13, 1.3482e-13, 2.0093e-13  ); % gives the modes 1e1*multiple
 %Qekf = 1e-8*eye(2*Nm + Ndam);
-Q_ekf_fd = 1e-8*blkdiag(0.5078,0.5143,0.5107, 0.8089, 0.9138, 0.4110 );      %    0.2663 , 0.2135 , 0.3137, 0.1538 ,0.4348, 0.8606);
-P_state_ekf = 1e0*blkdiag( 2.0851e-14,3.4895e-16  , 1.5246e-15 , 4.0725e-17 , 1.1409e-17 ,7.2615e-17, 2.3166e-07 ,3.8771e-09, 2.2563e-09,  4.5250e-10 , 1.2676e-10,  8.0682e-10 );
-% Pekf =  blkdiag(1e0*P_state_ekf,Q_ekf_fd);
+Q_ekf_fd = 1e-1*blkdiag(5.2941e-11, 8.4701e-11, 1.9810e-11,2.6663e-11 ,2.6273e-11,8.6801e-10 );      %    0.2663 , 0.2135 , 0.3137, 0.1538 ,0.4348, 0.8606);
+P_state_ekf = 1e-2*blkdiag( 1.3499e-15 , 1.6672e-15 , 9.6627e-17 , 4.6831e-18 ,1.2994e-18 , 1.0910e-18,1.1649e-17 ,1.4995e-08, 1.8522e-10, 1.0734e-09,3.6870e-11 , 1.2121e-11 );
+Pekf =  blkdiag(1e0*P_state_ekf,Q_ekf_fd);
 
-Pekf = 10^-1*blkdiag(1.3499e-15 , 1.6672e-15 , 9.6627e-17 , 4.6831e-18 ,1.2994e-18 , 1.0910e-18,1.1649e-17 ,1.4995e-08, 1.8522e-10, 1.0734e-09,3.6870e-11 , 1.2121e-11 ,5.2941e-11, 8.4701e-11, 1.9810e-11,2.6663e-11 ,2.6273e-11,8.6801e-10 );
+%Pekf = 10^-1*blkdiag(1.3499e-15 , 1.6672e-15 , 9.6627e-17 , 4.6831e-18 ,1.2994e-18 , 1.0910e-18,1.1649e-17 ,1.4995e-08, 1.8522e-10, 1.0734e-09,3.6870e-11 , 1.2121e-11 ,5.2941e-11, 8.4701e-11, 1.9810e-11,2.6663e-11 ,2.6273e-11,8.6801e-10 );
 
 Qekf = Pekf; %1e-4*eye(2*Nm + Ndam); %1e6*blkdiag( 2.0851e-14, 3.4895e-16 , 1.5246e-15, 4.0725e-17, 1.1409e-17 ,7.2615e-17, 2.3166e-07 ,3.8771e-09, 2.5383e-09, 1.6939e-08, 4.5250e-10, 2.4181e-10, 1.9583e-13, 1.3443e-13 ,  2.0059e-13, 1.9658e-13, 1.3482e-13, 2.0093e-13  );
 
@@ -257,9 +257,9 @@ accp=zeros(Nm,1);
    vrip=zeros(Nm,1);
    accpri=zeros(Nm,1);
 xx_true_store = zeros(Nm,N);   
-xx_store_dkf = zeros(2*Nm,N);
-xx_store_dkf2 = zeros(2*Nm,N);
-xx_store_ekf = zeros(2*Nm,N);
+xx_store_dkf = zeros(Nm,N);
+xx_store_dkf2 = zeros(Nm,N);
+xx_store_ekf = zeros(Nm,N);
 
 %% Creating some obs matrix for the different schemes and the states ( sc1 & sc2 & extened) 
 Obsv_state_s1 = zeros(2*Nm,1);
@@ -548,7 +548,7 @@ Bx2=Bx2_*Bdkf2*deltat;
     xxp_exfd = xx_exfd + Kekf*z_diff_ekf;
 
     % Storing the Values of the updated ekf 
-    xx_store_ekf = xxp_exfd(1:2*Nm); %(  first Nm 'u' then Nm 'vel')
+    xx_store_ekf(:,i) = xxp_exfd(1:Nm); %(  first Nm 'u' then Nm 'vel')
     fd_est_ex(:,i) = xxp_exfd(2*Nm +1: 2*Nm + Ndam);
 
     O_ex = obsv(Ax,Hekf);
@@ -560,7 +560,7 @@ Bx2=Bx2_*Bdkf2*deltat;
     Pn=A*P*transpose(A)+Q;    
     K=Pn*transpose(H)*inv((H*Pn*transpose(H))+R);
     xx=xx+K*(z'-H*xx);    
-    xx_store_dkf(:,i)=xx;
+    xx_store_dkf(:,i)=xx(1:Nm);
     vv=(xx(1:Nn)-xxp(1:Nn))/deltat;
     aa=(vv(1:Nn)-vvp(1:Nn))/deltat;
     FF=Mgm*aa(:)+Cgc*vv(:)+Kgk*xx(1:Nn);
@@ -575,7 +575,7 @@ Bx2=Bx2_*Bdkf2*deltat;
     Pndkf2=Ax2*Pdkf2*transpose(Ax2)+Qdkf2;    
     Kx2=Pndkf2*transpose(H)*inv((H*Pndkf2*transpose(H))+Rdkf2);
     xx2=xx2+Kx2*(z'-H*xx2);   
-    xx_store_dkf2(:,i) = xx2;
+    xx_store_dkf2(:,i) = xx2(1:Nm);
     fd_est_dkf2(:,i) = fd_dkf2;
     % vv2=(xx2(1:Nn)-xxp2(1:Nn))/deltat;
     % aa2=(vv(1:Nn)-vvp2(1:Nn))/deltat;
@@ -675,14 +675,15 @@ end
 
 
 
-% PLOTTING THE STATES  
+%% PLOTTING THE STATES  
 
-figure(5);
+figure;
   for i =1:Nm
         subplot(2,3,i);
         plot(linspace(0,deltat*N,N),xx_true_store(i,:),'k-'); hold on;
         plot(linspace(0,deltat*N,N),xx_store_dkf2(i,:),'m--');  hold on;
-        plot(linspace(0,deltat*N,N),xx_store_dkf(i,:),'b--');
+        plot(linspace(0,deltat*N,N),xx_store_dkf(i,:),'b--'); hold on;
+        plot(linspace(0,deltat*N,N),xx_store_ekf(i,:),'g--');
         xlabel('time');
         ylabel('displacement');
         title('disp(damage) vs time');
@@ -2174,8 +2175,8 @@ P1_s2 = 1./Obsv_state_s2;
 
 P_ekf = 1./Obsv_ekf ; 
 
-%% printing 
-for i =1:18
-    P_ekf(i)
-    %P2_s1(i)
-end
+% %% printing 
+% for i =1:18
+%     P_ekf(i)
+%     %P2_s1(i)
+% end
