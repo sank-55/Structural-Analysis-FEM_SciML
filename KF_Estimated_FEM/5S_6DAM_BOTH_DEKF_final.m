@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%   ONLY NEED TO TUNE THE EKF PROPERLY EVERYTHING IS FINE 
+%%   ONLY NEED TO TUNE THE EKF for the state  PROPERLY EVERYTHING IS FINE 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  This one with most effective observable points %%%%%%%%%%%%
 
@@ -1357,12 +1357,12 @@ w_1 = 100*pi; %1*137.2892;
 w_6 =  897.6603; 
 
 N = 5000;
-deltat = 0.00005;
+deltat = 0.0001;
 nObserv= 5 ;       % No of observable zones (** sensor is acting) 
 
 syms x y
 
-%Fil1=fopen('facdat1.m','w');
+
 
 
 Nm=6;
@@ -1555,7 +1555,7 @@ Q_ekf_fd = 1e-2*blkdiag(0.0249,0.0407,0.0346, 0.0283, 0.266 , 0.8991 );      %  
 P_state_ekf = 1e0*blkdiag(  2.3679e-15 , 4.8768e-17 , 2.1346e-16 , 5.6883e-18 , 1.2955e-18, 9.1274e-18, 2.5246e-08 , 5.1644e-10, 2.2563e-09, 6.0273e-11, 1.3815e-11, 9.6723e-11 );
 %Pekf = blkdiag(1e8*P_state_ekf,Q_ekf_fd);
 
-Pekf = 1e5*blkdiag( 8.1289e-16 ,4.2817e-17,1.2346e-16,1.6383e-17,5.3294e-18,3.7110e-17, 2.3148e-07,3.8740e-09, 1.6926e-08 ,4.5216e-10 ,1.2666e-10 ,8.0622e-10,2.8021e-11 ,3.4520e-11, 2.1252e-11,2.6508e-11,3.0627e-11 , 4.9820e-11);
+Pekf = 1e3*blkdiag( 8.1289e-16 ,3.7103e-16,1.6217e-15,4.3337e-17,1.2132e-17,7.7268e-17,  2.3118e-07, 3.8691e-09, 1.6926e-08 ,4.5216e-10, 1.2650e-10 , 8.0516e-10,9.6168e-09 ,4.4077e-09, 9.6275e-09,9.1041e-09, 4.3114e-09, 9.2748e-09);
 Qekf = 1e-6*Pekf; %blkdiag(3.3898e-15,3.8276e-17, 2.4722e-16, 1.3198e-17, 1.8844e-18,2.3570e-17, 3.4714e-08 ,3.8733e-10, 2.5383e-09,  1.3562e-10, 1.8996e-11, 2.4181e-10, 1.9583e-13, 1.3443e-13 ,  2.0059e-13, 1.9658e-13, 1.3482e-13, 2.0093e-13  );
 
 
@@ -1568,12 +1568,12 @@ Qf2 = 1e0*Pf2; %    % 1e1*blkdiag(0.0999,0.2832,0.7140 ,0.1923,0.2298,0.2095);
 % erf=zf-acc;
 % R=cov(erR')*10000000;
 % Rf=cov(erf')*10000000;
-R=1*eye(2*nObserv)*10^(-5);  % for state ( disp & vel) of Scheme - 1 for 6 sen ->1*eye(2*nObserv)*10^(-4) works better ( no noise)  
-Rf=1*eye(nObserv)*10^(0);
-Rf2=1*eye(nObserv)*10^(0);
+R=1*eye(2*nObserv)*10^(2);  % for state ( disp & vel) of Scheme - 1 for 6 sen ->1*eye(2*nObserv)*10^(-4) works better ( no noise)  
+Rf=1*eye(nObserv)*10^(-0.4);
+Rf2=1*eye(nObserv)*10^(-0.4);
 %Rf = 1e-2*blkdiag(0.2524, 0.4019,0.8427,0.4211);
 
-Rdkf2=1*eye(2*nObserv)*10^(-5); % for state ( disp & vel) of Scheme - 2
+Rdkf2=1*eye(2*nObserv)*10^(2); % for state ( disp & vel) of Scheme - 2
 %Rf2 = 1e-2*blkdiag(0.2524, 0.4019,0.8427,0.4211);
 
 Rekf = 1e1*eye(nObserv);
@@ -1617,9 +1617,9 @@ accp=zeros(Nm,1);
    vrip=zeros(Nm,1);
    accpri=zeros(Nm,1);
 xx_true_store = zeros(Nm,N);   
-xx_store_dkf = zeros(2*Nm,N);
-xx_store_dkf2 = zeros(2*Nm,N);
-xx_store_ekf = zeros(2*Nm,N);
+xx_store_dkf = zeros(Nm,N);
+xx_store_dkf2 = zeros(Nm,N);
+xx_store_ekf = zeros(Nm,N);
 
 %% Creating some obs matrix for the different schemes and the states ( sc1 & sc2 & extened) 
 Obsv_state_s1 = zeros(2*Nm,1);
@@ -1697,12 +1697,6 @@ AAinv=inv(AA);
     t=(i-1)*deltat;
     
    
-%     err=10000;
-%     
-%     
-%     while err>0.001
-%    
-%       
 
     disp=xxp(1:Nm)+xxp(Nm+1:2*Nm)*deltat;
     vel=xxp(Nm+1:2*Nm)+acp(1:Nm)*deltat;
@@ -1831,27 +1825,6 @@ AAinv=inv(AA);
 
     Bex = [zeros(Nm,Nm); inv(Mgm); zeros(Ndam,Nm)];
 
-% II=eye(Nn);
-% 
-% AA=Mgm+gamma*Cgc+beta*deltat^2*Kgk;
-% AAinv=inv(AA);
-% CC=Cgc+Kgk*deltat;
-% BB=deltat*Cgc*(1-gamma)+deltat^2/2*(1-2*beta)*Kgk;
-% 
-% A11=zeros(3*Nm,3*Nm);
-% 
-% A11(1:Nn,:)=[II-beta*deltat^2*AAinv*Kgk deltat*II-beta*deltat^2*AAinv*CC (1-2*beta)/2*deltat^2*II-beta*deltat^2*AAinv*BB];
-% 
-% A11(Nn+1:2*Nn,:)=[-gamma*deltat*AAinv*Kgk II-gamma*deltat*AAinv*CC (1-gamma)*deltat*II-gamma*deltat*AAinv*BB];
-% 
-% A11(2*Nn+1:3*Nn,:)=AAinv*[-Kgk -CC -BB];
-% A=A11;
-% 
-% B=[eye(Nm,Nm); gamma*deltat*eye(Nm,Nm); beta*deltat^2*eye(Nm,Nm)];
-
-% A=exp(Ac*deltat);
-% 
-% B=double(int(exp(Ac*tau),tau,0,deltat))*Bc;
 
 % Discretization 
 % for scheme 1
@@ -1936,7 +1909,7 @@ Bx2=Bx2_*Bdkf2*deltat;
     xxp_exfd = xx_exfd + Kekf*z_diff_ekf;
 
     % Storing the Values of the updated ekf 
-    xx_store_ekf = xxp_exfd(1:2*Nm); %(  first Nm 'u' then Nm 'vel')
+    xx_store_ekf(:,i) = xxp_exfd(1:Nm); %(  first Nm 'u' then Nm 'vel')
     fd_est_ex(:,i) = xxp_exfd(2*Nm +1: 2*Nm + Ndam);
 
     O_ex = obsv(Ax,Hekf);
@@ -1948,7 +1921,7 @@ Bx2=Bx2_*Bdkf2*deltat;
     Pn=A*P*transpose(A)+Q;    
     K=Pn*transpose(H)*inv((H*Pn*transpose(H))+R);
     xx=xx+K*(z'-H*xx);    
-    xx_store_dkf(:,i)=xx;
+    xx_store_dkf(:,i)=xx(1:Nm);
     vv=(xx(1:Nn)-xxp(1:Nn))/deltat;
     aa=(vv(1:Nn)-vvp(1:Nn))/deltat;
     FF=Mgm*aa(:)+Cgc*vv(:)+Kgk*xx(1:Nn);
@@ -1963,7 +1936,7 @@ Bx2=Bx2_*Bdkf2*deltat;
     Pndkf2=Ax2*Pdkf2*transpose(Ax2)+Qdkf2;    
     Kx2=Pndkf2*transpose(H)*inv((H*Pndkf2*transpose(H))+Rdkf2);
     xx2=xx2+Kx2*(z'-H*xx2);   
-    xx_store_dkf2(:,i) = xx2;
+    xx_store_dkf2(:,i) = xx2(1:Nm);
     fd_est_dkf2(:,i) = fd_dkf2;
     % vv2=(xx2(1:Nn)-xxp2(1:Nn))/deltat;
     % aa2=(vv(1:Nn)-vvp2(1:Nn))/deltat;
@@ -2155,8 +2128,9 @@ figure(5);
   for i =1:Nm
         subplot(2,3,i);
         plot(linspace(0,deltat*N,N),xx_true_store(i,:),'k-'); hold on;
-        plot(linspace(0,deltat*N,N),xx_store_dkf2(i,:),'m--');  hold on;
-        plot(linspace(0,deltat*N,N),xx_store_dkf(i,:),'b--');
+        plot(linspace(0,deltat*N,N),xx_store_dkf2(i,:),'m--'); 
+        plot(linspace(0,deltat*N,N),xx_store_dkf(i,:),'b--'); 
+        plot(linspace(0,deltat*N,N),xx_store_ekf(i,:),'g--');
         xlabel('time');
         ylabel('displacement');
         title('disp(damage) vs time');
