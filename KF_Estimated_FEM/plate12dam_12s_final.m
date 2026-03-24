@@ -139,6 +139,15 @@ Qdkf2 = eye(dim) / 1e-12;
 %Pekf = 1e19 * eye(2*Nm + Ndam); 
 Pekf = 1e-1*blkdiag(5.3489e-15,6.7229e-17,4.0723e-16, 2.5243e-17,4.9120e-18,4.5925e-17,6.0385e-09,7.5071e-11,4.5675e-10 ,2.7876e-11,5.4014e-12, 5.0964e-11,2.4343e-08,1.4394e-08,1.4358e-08,2.4396e-08,1.5747e-08,6.0527e-09,6.1104e-09,1.6249e-08,1.9990e-08,1.3034e-08 ,1.4240e-08,2.4590e-08 );
 
+% --- OPTIMIZATION COMPLETE ekf ---
+%  Optimized P_state: 10^(-12.13)
+%  Optimized P_param: 10^(-7.03)
+%  Optimized Q_state: 10^(-14.41)
+%  Optimized Q_param: 10^(-10.81)
+%  Optimized R: 10^(1.00)
+
+
+
 Qekf = 1e-20 * eye(2*Nm + Ndam);
 Qf = Pf; 
 Qf2 = Pf2; 
