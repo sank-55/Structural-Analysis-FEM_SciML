@@ -1,7 +1,7 @@
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %
-% %    %% 12 Modes, 12 Damage Factors - Dual KF & EKF with Observability
-% %
+% %    %% 6 Modes, 12 Damage Factors 10 SENSOR AT MOST OBS LOCATION  - Dual KF & EKF with Observability
+% %      ONLY EKF HAVE TO SEE ( REST NOISE , P,W IS ADJUSTED ) 
 % %
 % %%%%% _____________________________________________________________________________________________________________________________________________________________________________________________
 % 
@@ -9,7 +9,7 @@ clear all; close all;
 syms  x y
 
 % 1. Physical Parameters
-p = 300;
+p = 1000;
 ro = 2700;           % Density (kg/m3)
 yo = 70*10^9;        % Young's modulus
 neu = 0.3;           % Poisson's ratio
@@ -22,7 +22,7 @@ D = (yo * h^3) / (12 * (1 - neu^2));
 w_1 = 100*pi;   %1 * 137.2892;
 N = 5000;
 deltat = 0.0001;
-nObserv = 10;     %(8 to 12 easily predicted by it  )     % No of observable zones (sensors)
+nObserv = 10;     %(8 to 12 easily predicted by 6 MODES )     % No of observable zones (sensors)
 
 Nm = 6;             % 12 Modes
 Nn = Nm;
@@ -126,24 +126,24 @@ Haf = Phi;
 P = 1e-10 * eye(2*Nm);   
 Pdkf2 = 1e-10 * eye(2*Nm); 
 
-Pf = 1e-7 * blkdiag(0.1246, 0.0655,0.0535, 0.1486,0.1804,0.0217, 0.0227,0.1692,0.1699,0.081, 0.0808, 0.1641); 
-Pf2 = 1e-7 * blkdiag(0.1264, 0.6555,0.0545, 0.1486,0.1807,0.0223, 0.0227,0.1692,0.1700,0.081, 0.0823, 0.1641);
+Pf = 1e-8 * blkdiag(0.1246, 0.0655,0.0535, 0.1486,0.1804,0.0217, 0.0227,0.1692,0.1699,0.081, 0.0808, 0.1641); 
+Pf2 = 1e-8 * blkdiag(0.1246, 0.0655,0.0535, 0.1486,0.1804,0.0217, 0.0227,0.1692,0.1699,0.081, 0.0808, 0.1641);
 
-Q = eye(dim) / 1e-7;  
-Qdkf2 = eye(dim) / 1e-7; 
+Q = eye(dim) / 1e-10;  
+Qdkf2 = eye(dim) / 1e-10; 
 
 %Pekf = 1e19 * eye(2*Nm + Ndam); 
-Pekf = 1e5*blkdiag(1.3421e-14,1.2625e-16, 7.7437e-16, 4.8198e-17,1.0609e-17,7.7538e-17,5.5859e-09, 4.6491e-11,2.8968e-10 ,1.7384e-11, 5.2969e-12, 2.8044e-11, 1.9752e-08,6.7107e-09,6.8089e-09,2.0973e-08,2.2424e-08,3.8958e-09,3.9001e-09, 2.3562e-08,1.4734e-08,9.9054e-09 ,9.9128e-09,1.4875e-08 );
+Pekf = 1e4*blkdiag(1.3421e-14,1.2625e-16, 7.7437e-16, 4.8198e-17,1.0609e-17,7.7538e-17,5.5859e-09, 4.6491e-11,2.8968e-10 ,1.7384e-11, 5.2969e-12, 2.8044e-11, 1.9752e-08,6.7107e-09,6.8089e-09,2.0973e-08,2.2424e-08,3.8958e-09,3.9001e-09, 2.3562e-08,1.4734e-08,9.9054e-09 ,9.9128e-09,1.4875e-08 );
 
 Qekf = 1e-8 * eye(2*Nm + Ndam);
 Qf = Pf; 
 Qf2 = Pf2; 
 
 R = 10^-1 * eye(2*nObserv);  
-Rf = 10^-0.0 * eye(nObserv);
+Rf = 10^-0.2 * eye(nObserv);
 Rdkf2 = 10^-1 * eye(2*nObserv); 
-Rf2 = 10^-0.0 * eye(nObserv);
-Rekf = 10^-4.8 * eye(nObserv);
+Rf2 = 10^-0.2 * eye(nObserv);
+Rekf = 10^-0 * eye(nObserv);
 
 %% 7. Variable Initialization for Time Loop
 xx = zeros(dim, 1);
@@ -226,7 +226,7 @@ for i = 2:N
     xx_store_true(:,i)=xri;
 
     z = [(Phi*(xri+xri*0.02*rand)'); (Phi*(vri+vri*0.02*rand)')]';
-    zf =( Phi * (ac + ac*0.02*rand))';
+    zf =( Phi * (ac + ac*0.03*rand))';
 
     %% Filter Prediction & Update
     disp = xxp(1:Nm) + xxp(Nm+1:2*Nm)*deltat;
