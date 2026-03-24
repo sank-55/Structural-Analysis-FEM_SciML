@@ -20,7 +20,7 @@ divy=3;  %input(' enter the no of divisions on the length ');
 ey=b/(divy);
 %% Natural frequencies for the above 
 %% NB: when frequencies are around 8,9 w1 we find scheme 2 is better than the other model
-w_1 = 45*pi; %1*137.2892;
+w_1 = 100*pi; %1*137.2892;
 w_6 =  897.6603; 
 
 N = 50000;
@@ -247,7 +247,12 @@ Qekf = 1e-16*blkdiag(3.3898e-15,3.8276e-17, 2.4722e-16, 1.3198e-17, 1.8844e-18,2
 
 Pekf = 1e-2*blkdiag(1.3618e-15, 1.8997e-17, 1.5011e-16, 4.4480e-18, 9.5827e-19,6.8678e-18,1.6263e-08,1.8153e-10,1.5843e-09,4.2378e-11,8.9287e-12,6.4734e-11,9.4716e-48,2.4429e-48,1.6808e-47,1.7643e-47,3.8614e-47,2.8824e-47);
 
-
+%--- OPTIMIZATION COMPLETE ---
+%Optimized P_state: 10^(-12.36)
+%Optimized P_param: 10^(-14.51)
+%Optimized Q_state: 10^(-12.02)
+%Optimized Q_param: 10^(-17.89)
+%Optimized R: 10^(1.92)
 
 %Qf=    ;
 %Qf = 1e-11*blkdiag( 0.2438  ,0.1030 ,0.2463  ,0.2365   , 0.1000, 0.2328);  % working better in 1e-12
