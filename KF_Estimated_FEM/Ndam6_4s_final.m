@@ -217,6 +217,14 @@ Qekf = Pekf; %1e-4*eye(2*Nm + Ndam); %1e6*blkdiag( 2.0851e-14, 3.4895e-16 , 1.52
 % Optimized Q_param: 10^(-15.71)
 % Optimized R: 10^(0.15)
 
+% --- OPTIMIZATION COMPLETE ---
+% Optimized P_state: 10^(-8.20)
+% Optimized P_param: 10^(-8.82)
+% Optimized Q_state: 10^(-12.04)
+% Optimized Q_param: 10^(-10.63)
+% Optimized R: 10^(-0.42)
+
+
 %Qf=    ;
 %Qf = 1e-11*blkdiag( 0.2438  ,0.1030 ,0.2463  ,0.2365   , 0.1000, 0.2328);  % working better in 1e-12
 Qf = Pf; %1e-12*blkdiag( 0.4793  , 0.3464 ,0.5248, 0.4994 ,0.3564, 0.5304);
