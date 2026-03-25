@@ -101,13 +101,16 @@ try
         'Display', 'iter', 'PlotFcn', @gaplotbestf, 'UseParallel', false); 
 
     nvars = 5; 
-    lb = [-16,-16, -16, -16, 1]; 
-    ub = [-8, -8,  -8,  -1,   2];
+    lb = [-16,-16, -12, -12, 1]; 
+    ub = [-8, -8,  -8,  -1,   4];
     [best_exps, min_val] = ga(objective_func, nvars, [], [], [], [], lb, ub, [], options);
 
     fprintf('\n--- OPTIMIZATION COMPLETE ---\n');
-    fprintf('Optimized Q_state: 10^(%.2f)\n', best_exps(1));
-    fprintf('Optimized Q_param: 10^(%.2f)\n', best_exps(2));
+    
+    fprintf('Optimized P_state: 10^(%.2f)\n', best_exps(1));
+    fprintf('Optimized p_param: 10^(%.2f)\n', best_exps(2));
+    fprintf('Optimized Q_state: 10^(%.2f)\n', best_exps(3));
+    fprintf('Optimized Q_param: 10^(%.2f)\n', best_exps(4));
     fprintf('Optimized R: 10^(%.2f)\n', best_exps(3));
 catch ME
     rethrow(ME);
