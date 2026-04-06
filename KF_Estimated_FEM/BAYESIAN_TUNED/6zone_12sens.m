@@ -236,6 +236,7 @@ for i=1:6
 end
 %%
 figure(15);
+sgtitle('Damage Estimation with 12 Sensor(Most Obsv point)');
 for i = 1:6
     % --- 1. Calculate RMSE for each filter ---
     rmse_dkf1 = sqrt(mean((damf_true(i,:) - fd_dkf1_optimized(i,:)).^2));
@@ -251,6 +252,9 @@ for i = 1:6
     
     % --- 3. Formatting ---
     title(['Zone ', num2str(i)]);
+    xlabel('Time Step');
+    ylabel('Damage Factor (fd)');
+
     grid on;
     
     % --- 4. Create Legend with RMSE for every subplot ---
