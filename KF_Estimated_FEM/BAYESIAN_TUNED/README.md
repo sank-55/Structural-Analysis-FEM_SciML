@@ -5,3 +5,6 @@ p,q,r params are only tuned by bayopt
 
 ## 12zones_12sens
 <img width="1950" height="795" alt="image" src="https://github.com/user-attachments/assets/4523cb69-58fa-489e-a213-711edbe6510b" />
+
+## 12 zones 10 sensors
+![WhatsApp Image 2026-04-06 at 2 22 50 PM](https://github.com/user-attachments/assets/6ff2036a-c373-4f46-93ff-6b31703fd461)
