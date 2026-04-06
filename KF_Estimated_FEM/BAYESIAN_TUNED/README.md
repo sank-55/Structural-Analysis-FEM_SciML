@@ -8,3 +8,6 @@ p,q,r params are only tuned by bayopt
 
 ## 12 zones 10 sensors
 ![WhatsApp Image 2026-04-06 at 2 22 50 PM](https://github.com/user-attachments/assets/6ff2036a-c373-4f46-93ff-6b31703fd461)
+
+## 12 zones and 8 sensors
+<img width="1600" height="783" alt="image" src="https://github.com/user-attachments/assets/ec9c7f35-251e-4a7d-898a-964a429fbba7" />
