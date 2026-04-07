@@ -300,12 +300,13 @@ for i=1:Ndam
     if i==1; legend('True','EKF Tuned'); end
 end
 %%
-figure(15);
+figure(17);
+clf; 
 set(gcf, 'Color', 'w', 'Units', 'inches', 'Position', [1, 1, 12, 9]); 
 
-plot_handles = []; 
-marker_interval = 200; % Increased interval for a cleaner look
-
+marker_interval = 450; 
+smooth_span = 100;
+smooth_span_ekf = 100;
 for i = 1:Ndam
     % --- 1. Calculate RMSE ---
     rmse1 = sqrt(mean((damf_true(i,:) - fd_dkf1_optimized(i,:)).^2));
@@ -313,54 +314,56 @@ for i = 1:Ndam
     rmse3 = sqrt(mean((damf_true(i,:) - fd_est(i,:)).^2));
     
     subplot(3,4,i);
+    hold on;
     
-    % --- 2. High-Contrast Marker Staggering ---
+    % --- 2. Plotting with "Haloed" Markers ---
+    h_true = plot(damf_true(i,:), '-', 'Color', [0.6 0.6 0.6], 'LineWidth', 2.5);
     
-    % TRUE: Thick solid gray (The background reference)
-    h_true = plot(damf_true(i,:), '-', 'Color', [0.7 0.7 0.7], 'LineWidth', 2.5); hold on;
+    % DKF1
+    smooth_dk1 = movmean(fd_dkf1_optimized(i,:), smooth_span);
+    h_dk1 = plot(smooth_dk1, 'k-', 'LineWidth', 1.1, ...
+        'Marker', 'o', 'MarkerIndices', 1 : marker_interval : length(smooth_dk1), ...
+        'MarkerSize', 4.5, 'MarkerFaceColor', 'w');
     
-    % DKF1: Dashed Black + Circle (Start at index 1)
-    h_dk1 = plot(fd_dkf1_optimized(i,:), 'k--', 'LineWidth', 1, ...
-        'Marker', 'o', 'MarkerIndices', 1 : marker_interval : length(fd_dkf1_optimized), ...
-        'MarkerSize', 4, 'MarkerFaceColor', 'w'); % White face makes it pop
+    % DKF2
+    smooth_dk2 = movmean(fd_dkf2_optimized(i,:), smooth_span);
+    h_dk2 = plot(smooth_dk2, 'k-', 'LineWidth', 1.1, ...
+        'Marker', 's', 'MarkerIndices', floor(marker_interval/3) : marker_interval : length(smooth_dk2), ...
+        'MarkerSize', 4.5, 'MarkerFaceColor', 'k', 'MarkerEdgeColor', 'w');
     
-    % DKF2: Dotted Black + Square (Start at index 66)
-    h_dk2 = plot(fd_dkf2_optimized(i,:), 'k:', 'LineWidth', 1, ...
-        'Marker', 's', 'MarkerIndices', floor(marker_interval/3) : marker_interval : length(fd_dkf2_optimized), ...
-        'MarkerSize', 4, 'MarkerFaceColor', 'k'); % Solid black face to distinguish from DKF1
-    
-    % EKF: Dash-Dot Black + Cross (Start at index 133)
-    h_ekf = plot(fd_est(i,:), 'k-.', 'LineWidth', 1, ...
-        'Marker', 'x', 'MarkerIndices', floor(2*marker_interval/3) : marker_interval : length(fd_est), ...
+    % EKF
+    smooth_ekf = movmean(fd_est(i,:), smooth_span_ekf);
+    h_ekf = plot(smooth_ekf, 'k:.', 'LineWidth', 1.1, ...
+        'Marker', '+', 'MarkerIndices', floor(2*marker_interval/3) : marker_interval : length(smooth_ekf), ...
         'MarkerSize', 6);
 
-    if i == 1, plot_handles = [h_true, h_dk1, h_dk2, h_ekf]; end
+    % --- 3. Refined RMSE Text Placement ---
+    % Placed at top-left (0.05, 0.9) of each subplot
+    text_str = {sprintf('DK1: %.4f', rmse1), ...
+                sprintf('DK2: %.4f', rmse2), ...
+                sprintf('EKF: %.4f', rmse3)};
+    text(0.05, 0.90, text_str, 'Units', 'normalized', ...
+        'VerticalAlignment', 'top', 'FontSize', 7.5, ...
+        'FontName', 'Helvetica', 'BackgroundColor', [1 1 1 0.7]);
 
-    % --- 3. Axis & Labeling ---
+    % --- 4. Subplot Formatting ---
     title(['Zone ', num2str(i)], 'FontSize', 10, 'FontWeight', 'bold');
-    grid on; 
-    set(gca, 'GridAlpha', 0.15, 'FontSize', 8.5);
+    grid on; box on;
+    set(gca, 'GridAlpha', 0.1, 'FontSize', 9);
+    if mod(i-1, 4) == 0, ylabel('Damage Factor'); end
+    if i > 8, xlabel('Time Step'); end
     
-    % Display Y-ticks on every plot, but labels only on the outer edges
-    if mod(i-1, 4) == 0, ylabel('Damage Factor', 'FontSize', 9); end
-    if i > 8, xlabel('Time Step', 'FontSize', 9); end
-    
-    % --- 4. RMSE Text Overlay ---
-    text_str = {sprintf('DK1: %.3f', rmse1), ...
-                sprintf('DK2: %.3f', rmse2), ...
-                sprintf('EKF: %.3f', rmse3)};
-    text(0.05, 0.95, text_str, 'Units', 'normalized', ...
-        'VerticalAlignment', 'top', 'FontSize', 7, ...
-        'BackgroundColor', [1 1 1 0.8], 'EdgeColor', 'none');
+    if i == 1, plot_handles = [h_true, h_dk1, h_dk2, h_ekf]; end
 end
 
-% --- 5. Shared Global Legend ---
-leg_labels = {'True', 'DKF1(RMSE:0.02145)', 'DKF2(RMSE:0.020365)', ...
-              'EKF(RMSE:0.037437)  \bf[Sensor:12] (12 modes NM) \rm'};
-
-L = legend(plot_handles, leg_labels, ...
-    'Orientation', 'horizontal', 'FontSize', 11, 'Interpreter', 'tex');
-set(L, 'Position', [0.3, 0.01, 0.4, 0.04], 'Box', 'on', 'LineWidth', 0.8);
+% --- 5. Corrected Legend Placement ---
+% [left, bottom, width, height] in figure-normalized units
+% Values around 0.5 center the legend horizontally
+leg_labels = {'True', 'DKF1[RMSE:0.0214]', 'DKF2[RMSE:0.0203]', ...
+              'EKF[RMSE:0.0374]  \bf[Sensor:12]\rm'};
+L = legend(plot_handles, leg_labels, 'Orientation', 'horizontal', ...
+    'Interpreter', 'tex', 'FontSize', 11);
+set(L, 'Position', [0.15, 0.015, 0.7, 0.03], 'Box', 'on', 'EdgeColor', [0.5 0.5 0.5]);
 
 %% --- HELPER: EKF FUNCTION ---
 function [score, fd_history] = run_ekf_internal(p, M, K0, C, Kd_all, Phi, Fgf, nObs, Nm, Ndam, dt, N, w1, z, truth)
