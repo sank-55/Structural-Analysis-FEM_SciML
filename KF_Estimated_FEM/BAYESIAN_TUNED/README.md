@@ -14,3 +14,5 @@ p,q,r params are only tuned by bayopt
 
 # 12 zones 10 sensors 12 NBETA MODES 
 <img width="1442" height="1055" alt="image" src="https://github.com/user-attachments/assets/4b39ebc1-75fb-491e-8684-fd6a81268bb1" />
+# 12 zones 8 sensors 12 NBETA MODES 
+<img width="1743" height="984" alt="image" src="https://github.com/user-attachments/assets/19c376f9-f548-4f4c-bac3-377f943dd425" />
