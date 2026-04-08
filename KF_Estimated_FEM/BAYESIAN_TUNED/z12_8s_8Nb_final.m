@@ -1,7 +1,7 @@
 
 %%
 clear all; close all; clc;
-% ********* wORKING BUT HAVE TO CHECK FOR THE DKF2 IS WORKING BETTER OR NOT 
+%********** wORKING BUT HAVE TO CHECK FOR THE DKF2 IS WORKING BETTER OR NOT  
 
 %% 1. PHYSICAL PARAMETERS & SYSTEM SETUP
 p=1000; ro=2700; yo=70*10^9; neu=0.3; h=0.001;
@@ -152,11 +152,11 @@ damf_true=zeros(Ndam,N);
 % end
 
 % for 12 zones 
-for i = 200:N,  damf_true(1,i) = (i-200)*0.3/(N-200); end
+for i = 200:N,  damf_true(1,i) = (i-200)^0.7*0.3/(N-200)^0.7; end
 for i = 1200:N, damf_true(2,i) = (i-1200) * 0.1 / (N-1200); end
 for i = 600:N,  damf_true(6,i) = (i-600) * 0.3 / (N-600); end
 for i = 30:N,   damf_true(7,i) = (i-30)*0.2 / (N-30); end
-for i = 800:N,  damf_true(12,i) = (i-800) * 0.1 / (N-800); end
+for i = 800:N,  damf_true(12,i) = (i-200)^0.8 * 0.15 / (N-200)^0.8; end
 for i = 1500:N, damf_true(11,i) = (i-1500) * 0.25 / (N-1500); end
 
 
@@ -229,8 +229,9 @@ optimVars_ekf = [
 %-15.828        -18.034        -11.565        -7.1682      0.7003(0.046431)
 
 %% *** FOR 8 SENSOR 8 NB MODES  
-%-20.458        -12.893        -15.736        -10.478      -3.0872(0.031101)
-%-19.113        -12.834        -15.846        -10.737  -3.3775(0.033066)
+%-20.977        -12.172        -15.557        -10.336      -3.0172(0.028718)
+%-20.754        -12.637        -15.68         -10.401      -3.1125( 0.030341)
+%-20.025        -12.698        -15.997        -10.789      -3.4665(0.031727)
     optimizableVariable('p_state_exp', [-21, -20], 'Type', 'real')
     optimizableVariable('p_param_exp', [-13, -12], 'Type', 'real')
     optimizableVariable('q_state_exp', [-16, -15], 'Type', 'real')
@@ -253,14 +254,15 @@ optimVars_dkf2 = [
 
 
 %% *** FOR 8 SENSOR 8 NB MODES  
-%-21.67    -33.893    -0.12003  -15.737   -4.7407   -6.8051  0.83079(0.017534)
-%--20.997         -33.538         0.09155         -13.587         -4.6354  -5.0674      0.89919(0.015899)
-    optimizableVariable('p_state_dkf2', [-22, -20], 'Type', 'real')
-    optimizableVariable('p_param_dkf2', [-34, -32], 'Type', 'real')
-    optimizableVariable('q_state_dkf2', [-1, 1], 'Type', 'real')
-    optimizableVariable('q_param_dkf2', [-14, -13], 'Type', 'real')
-    optimizableVariable('r_state_dkf2', [-6, -4.8], 'Type', 'real')
-    optimizableVariable('r_param_dkf2', [-6, -5], 'Type', 'real')
+%-6.6531         -25.121          9.8729         -9.6449          6.0124         -1.3397       0.89188(0.015128)
+%--20.997   -33.538         0.09155         -13.587         -4.6354  -5.0674      0.89919(0.015899)
+
+    optimizableVariable('p_state_dkf2', [-8, -6], 'Type', 'real')
+    optimizableVariable('p_param_dkf2', [-26, -23], 'Type', 'real')
+    optimizableVariable('q_state_dkf2', [8, 10], 'Type', 'real')
+    optimizableVariable('q_param_dkf2', [-10, -8], 'Type', 'real')
+    optimizableVariable('r_state_dkf2', [6, 8], 'Type', 'real')
+    optimizableVariable('r_param_dkf2', [-2, 2], 'Type', 'real')
     optimizableVariable('rval', [0.4, 0.9], 'Type', 'real')
 
     ];
@@ -274,13 +276,14 @@ optimVars_dkf1 = [
 % %-18.168         -19.375          11.373         -7.0075          4.6926          2.8659 (0.025042)
 
 %% *** FOR 8 SENSOR 8 NB MODES  
-%-7.1983          -24.8           10.728         -10.328          6.2745         -1.8194(0.015831)
-%-7.9399         -23.961          9.5119         -9.0048          6.3593         -0.48877 (0.015558)
+%-7.63          -26.736          9.8385          -9.992          6.1422         -1.4315( 0.014461)
+%-7.8222          -25.06          9.5205         -9.9244          7.3338         -1.0965  (0.016861)
+
 %-7.5948         -24.976          10.257         -10.397          6.6813         -1.8805 (0.01557)
     optimizableVariable('p_state_dkf1', [-8, -7], 'Type', 'real')
-    optimizableVariable('p_param_dkf1', [-26, -24], 'Type', 'real')
-    optimizableVariable('q_state_dkf1', [9, 11], 'Type', 'real')
-    optimizableVariable('q_param_dkf1', [-11, -9], 'Type', 'real')
+    optimizableVariable('p_param_dkf1', [-27, -25], 'Type', 'real')
+    optimizableVariable('q_state_dkf1', [9, 12], 'Type', 'real')
+    optimizableVariable('q_param_dkf1', [-10, -8], 'Type', 'real')
     optimizableVariable('r_state_dkf1', [6, 8], 'Type', 'real')
     optimizableVariable('r_param_dkf1', [-2, 1], 'Type', 'real')
     
@@ -290,13 +293,13 @@ optimVars_dkf1 = [
 
 
 fprintf('\nStarting Bayesian Optimization ekf ...\n');
-results_ekf = bayesopt(ObjFcn_ekf, optimVars_ekf, 'MaxObjectiveEvaluations', 100, 'PlotFcn', {});
+results_ekf = bayesopt(ObjFcn_ekf, optimVars_ekf, 'MaxObjectiveEvaluations', 20, 'PlotFcn', {});
 
 fprintf('\nStarting Bayesian Optimization dkf1 ...\n');
-results_dkf1 = bayesopt(ObjFcn_dkf1, optimVars_dkf1, 'MaxObjectiveEvaluations', 100, 'PlotFcn', {});
+results_dkf1 = bayesopt(ObjFcn_dkf1, optimVars_dkf1, 'MaxObjectiveEvaluations', 20, 'PlotFcn', {});
 
 fprintf('\nStarting Bayesian Optimization dkf2 ...\n');
-results_dkf2 = bayesopt(ObjFcn_dkf2, optimVars_dkf2, 'MaxObjectiveEvaluations', 100, 'PlotFcn', {});
+results_dkf2 = bayesopt(ObjFcn_dkf2, optimVars_dkf2, 'MaxObjectiveEvaluations', 20, 'PlotFcn', {});
 
 %% 4. FINAL SIMULATION WITH BEST PARAMETERS
 bestP = bestPoint(results_ekf);
@@ -383,7 +386,7 @@ end
 % --- 5. Corrected Legend Placement ---
 % [left, bottom, width, height] in figure-normalized units
 % Values around 0.5 center the legend horizontally
-leg_labels = {'True', 'DKF1[RMSE:0.025071]', 'DKF2[RMSE:0.025301]', ...
+leg_labels = {'True', 'DKF1[RMSE: 0.015576]', 'DKF2[RMSE:0.025301]', ...
               'EKF[RMSE:0.044954]  \bf[Sensor:8] (8MODES NM)\rm'};
 L = legend(plot_handles, leg_labels, 'Orientation', 'horizontal', ...
     'Interpreter', 'tex', 'FontSize', 11);
