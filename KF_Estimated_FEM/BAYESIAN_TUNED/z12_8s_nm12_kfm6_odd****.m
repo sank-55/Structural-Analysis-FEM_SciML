@@ -1,7 +1,7 @@
 
 %%
 clear all; close all; clc;
-% have to tune perfectly cz it has the potential 
+% wORKING BUT HAVE TO CHECK FOR THE DKF2 IS WORKING BETTER OR NOT 
 
 %% 1. PHYSICAL PARAMETERS & SYSTEM SETUP
 p=1000; ro=2700; yo=70*10^9; neu=0.3; h=0.001;
@@ -466,7 +466,7 @@ damf_true=zeros(Ndam,N);
 % end
 
 % for 12 zones 
-for i = 200:N,  damf_true(1,i) = (i-200)*0.3/(N-200); end
+for i = 200:N,  damf_true(1,i) = (i-200)^0.7*0.3/(N-200)^0.7; end
 for i = 1200:N, damf_true(2,i) = (i-1200) * 0.1 / (N-1200); end
 for i = 600:N,  damf_true(6,i) = (i-600) * 0.3 / (N-600); end
 for i = 30:N,   damf_true(7,i) = (i-30)*0.2 / (N-30); end
@@ -539,16 +539,16 @@ end
 %% 3. BAYESIAN OPTIMIZATION
 
 optimVars_ekf = [
-% 26 MODES     
-%-29.651        -45.914        -21.847        -15.243      -4.7998(0.052562)
+% 12nm and 6kf MODES     
+%-12.854        -14.092        -28.061        -23.763      -7.2308(0.050954)
 
 %-16.647        -18.11         -11.75         -7.2362      0.44239(0.044954)
 % -25.333        -26.894        -19.881        -6.139       4.1736(0.052563)
 %-24.654        -27.012        -20.68         -6.6153      4.19833(0.051902)
-    optimizableVariable('p_state_exp', [-46, -12], 'Type', 'real')
-    optimizableVariable('p_param_exp', [-48, -6], 'Type', 'real')
-    optimizableVariable('q_state_exp', [-41, -19], 'Type', 'real')
-    optimizableVariable('q_param_exp', [-28, 4], 'Type', 'real')
+    optimizableVariable('p_state_exp', [-18, -10], 'Type', 'real')
+    optimizableVariable('p_param_exp', [-16, -10], 'Type', 'real')
+    optimizableVariable('q_state_exp', [-30, -20], 'Type', 'real')
+    optimizableVariable('q_param_exp', [-8, -6], 'Type', 'real')
     %optimizableVariable('p_exp', [-10, -6], 'Type', 'real')
     %optimizableVariable('q_exp', [-20, -12], 'Type', 'real')
     optimizableVariable('r_exp', [-8, 12], 'Type', 'real')
@@ -561,7 +561,7 @@ ObjFcn_ekf = @(p) run_ekf_internal(p, Mgm, Kgk_undamaged, Cgc, Kd, Phi_mat, Fgf,
 
 optimVars_dkf2 = [
 
-    % -13.531         -28.303          3.2146          8.221          0.30976   17.943       0.78106(0.050722)
+    % -13.664         -28.637          2.7683          7.9198         -0.98527         15.033       0.84917(0.043712)
 
     % FOR 12 nb modes 8 sens 
  % -12.393         -29.406          6.7551          2.9563         -3.8204  13.899       0.20024(0.041737)***
@@ -569,11 +569,11 @@ optimVars_dkf2 = [
 % -13.74          -27.21         -2.5021         -13.005         -3.7231         -1.3997       0.57543(0.051169)
 
     optimizableVariable('p_state_dkf2', [-15, -12], 'Type', 'real')
-    optimizableVariable('p_param_dkf2', [-30, -28], 'Type', 'real')
-    optimizableVariable('q_state_dkf2', [2, 5], 'Type', 'real')
-    optimizableVariable('q_param_dkf2', [6, 8], 'Type', 'real')
-    optimizableVariable('r_state_dkf2', [-1, 3], 'Type', 'real')
-    optimizableVariable('r_param_dkf2', [15, 20], 'Type', 'real')
+    optimizableVariable('p_param_dkf2', [-28, -24], 'Type', 'real')
+    optimizableVariable('q_state_dkf2', [-1, 4], 'Type', 'real')
+    optimizableVariable('q_param_dkf2', [7, 10], 'Type', 'real')
+    optimizableVariable('r_state_dkf2', [-4, 2], 'Type', 'real')
+    optimizableVariable('r_param_dkf2', [12, 18], 'Type', 'real')
     optimizableVariable('rval', [0.2, 0.9], 'Type', 'real')
 
     ];
@@ -582,19 +582,19 @@ optimVars_dkf2 = [
 
 
 optimVars_dkf1 = [
-%  -30.279          -15.92         -1.4241         -3.7321         -4.8738          2.0403(0.056337) 
+%   -28.544         -15.695         -0.37309        -3.8688         -2.4984          2.9227  (0.044715) 
     % FOR 12 nb mode 8 sen 
 % %-25.534         -26.823          14.98          -12.619          5.1501         -1.6602(0.041977)
 % -24.857          -26.32          14.084          -12.05          7.2985         -1.0863(0.04207) 
 % % -25.805         -27.461          15.064         -12.026          8.2364     -0.90961  (0.03678)***
 
 
-    optimizableVariable('p_state_dkf1', [-31, -28], 'Type', 'real')
-    optimizableVariable('p_param_dkf1', [-16, -14], 'Type', 'real')
-    optimizableVariable('q_state_dkf1', [-2, 0], 'Type', 'real')
-    optimizableVariable('q_param_dkf1', [-4, -1], 'Type', 'real')
-    optimizableVariable('r_state_dkf1', [-6, -2], 'Type', 'real')
-    optimizableVariable('r_param_dkf1', [1,3], 'Type', 'real')
+    optimizableVariable('p_state_dkf1', [-30, -22], 'Type', 'real')
+    optimizableVariable('p_param_dkf1', [-18, -14], 'Type', 'real')
+    optimizableVariable('q_state_dkf1', [-4, 2], 'Type', 'real')
+    optimizableVariable('q_param_dkf1', [-6, -1], 'Type', 'real')
+    optimizableVariable('r_state_dkf1', [-4, 2], 'Type', 'real')
+    optimizableVariable('r_param_dkf1', [2,8], 'Type', 'real')
     
     ];
  ObjFcn_dkf1 = @(p) run_dkf1_internal(p, Mgm, Kgk_undamaged, Cgc, Kd, Phi_mat, Fgf, ...
@@ -602,13 +602,13 @@ optimVars_dkf1 = [
 
 
 fprintf('\nStarting Bayesian Optimization ekf ...\n');
-results_ekf = bayesopt(ObjFcn_ekf, optimVars_ekf, 'MaxObjectiveEvaluations', 100, 'PlotFcn', {});
+results_ekf = bayesopt(ObjFcn_ekf, optimVars_ekf, 'MaxObjectiveEvaluations', 300, 'PlotFcn', {});
 
 fprintf('\nStarting Bayesian Optimization dkf1 ...\n');
-results_dkf1 = bayesopt(ObjFcn_dkf1, optimVars_dkf1, 'MaxObjectiveEvaluations', 100, 'PlotFcn', {});
+results_dkf1 = bayesopt(ObjFcn_dkf1, optimVars_dkf1, 'MaxObjectiveEvaluations', 300, 'PlotFcn', {});
 
 fprintf('\nStarting Bayesian Optimization dkf2 ...\n');
-results_dkf2 = bayesopt(ObjFcn_dkf2, optimVars_dkf2, 'MaxObjectiveEvaluations', 100, 'PlotFcn', {});
+results_dkf2 = bayesopt(ObjFcn_dkf2, optimVars_dkf2, 'MaxObjectiveEvaluations', 300, 'PlotFcn', {});
 
 %% 4. FINAL SIMULATION WITH BEST PARAMETERS
 bestP = bestPoint(results_ekf);
@@ -889,7 +889,7 @@ for i =2:N
     end
      
     Hdkf2 = Phi_mat*(inv(Mgm)*(Kdx2)) ;
-   rank(Hdkf2)
+   %rank(Hdkf2)
     a_dkf2 = Hdkf2*fd_dkf2 + Phi_mat*(inv(Mgm)*(F1- Kgk_undamaged*(xxp2(1:Nm) + deltat*xxp2(Nm+1:2*Nm)) - Cgc*(xxp2(Nm+1:2*Nm) + deltat*acp_2) ));
      
 
