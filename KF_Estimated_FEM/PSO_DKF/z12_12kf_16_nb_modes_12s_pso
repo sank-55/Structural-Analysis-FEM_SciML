@@ -574,13 +574,13 @@ optimVars_ekf = [
 
 % FOR 10 SENSOR 
 % 5.23          -14.507          -20          -9.5545      1.3514(0.0590)
-    optimizableVariable('p_state_exp', [3, 5], 'Type', 'real')
-    optimizableVariable('p_param_exp', [-15, -12], 'Type', 'real')
-    optimizableVariable('q_state_exp', [-22, -19], 'Type', 'real')
+    optimizableVariable('p_state_exp', [4, 6], 'Type', 'real')
+    optimizableVariable('p_param_exp', [-14, -12], 'Type', 'real')
+    optimizableVariable('q_state_exp', [-22, -20], 'Type', 'real')
     optimizableVariable('q_param_exp', [-10, -8], 'Type', 'real')
     %optimizableVariable('p_exp', [-10, -6], 'Type', 'real')
     %optimizableVariable('q_exp', [-20, -12], 'Type', 'real')
-    optimizableVariable('r_exp', [1, 3], 'Type', 'real')
+    optimizableVariable('r_exp', [-1, 1], 'Type', 'real')
 ];
 
 
@@ -620,13 +620,13 @@ optimVars_dkf2 = [
 
 % 12 sensor 
 %-23.566         -21.546          3.1469          8.9849            2   18.461       0.9 (0.0114)
-    optimizableVariable('p_state_dkf2', [-24, -23], 'Type', 'real')
-    optimizableVariable('p_param_dkf2', [-22, -21], 'Type', 'real')
-    optimizableVariable('q_state_dkf2', [3, 3.5], 'Type', 'real')
-    optimizableVariable('q_param_dkf2', [8, 9], 'Type', 'real')
-    optimizableVariable('r_state_dkf2', [1.5, 2.5], 'Type', 'real')
-    optimizableVariable('r_param_dkf2', [18, 19], 'Type', 'real')
-    optimizableVariable('rval', [0.2, 0.9], 'Type', 'real')
+    optimizableVariable('p_state_dkf2', [-23.7, -23.5], 'Type', 'real')
+    optimizableVariable('p_param_dkf2', [-21.6, -21.2], 'Type', 'real')
+    optimizableVariable('q_state_dkf2', [3.1, 3.3], 'Type', 'real')
+    optimizableVariable('q_param_dkf2', [8.8, 9.2], 'Type', 'real')
+    optimizableVariable('r_state_dkf2', [1.8, 2.1], 'Type', 'real')
+    optimizableVariable('r_param_dkf2', [18.2, 18.8], 'Type', 'real')
+    optimizableVariable('rval', [0.5, 0.9], 'Type', 'real')
 
     ];
  
@@ -646,12 +646,12 @@ optimVars_dkf1 = [
 % % -25.805         -27.461          15.064         -12.026          8.2364     -0.90961  (0.03678)***
 % FOR 10 SENSOR 10 MODES 
 %  -27.027           -15              2              -12           0.84451   -2( 0.0463)
-    optimizableVariable('p_state_dkf1', [-24, -23], 'Type', 'real')
-    optimizableVariable('p_param_dkf1', [-22, -21], 'Type', 'real')
-    optimizableVariable('q_state_dkf1', [3, 4], 'Type', 'real')
-    optimizableVariable('q_param_dkf1', [8, 9], 'Type', 'real')
-    optimizableVariable('r_state_dkf1', [1.5, 2.5], 'Type', 'real')
-    optimizableVariable('r_param_dkf1', [18,20], 'Type', 'real')
+    optimizableVariable('p_state_dkf1', [-23.5, -23], 'Type', 'real')
+    optimizableVariable('p_param_dkf1', [-21.8, -21], 'Type', 'real')
+    optimizableVariable('q_state_dkf1', [3, 3.8], 'Type', 'real')
+    optimizableVariable('q_param_dkf1', [8, 8.8], 'Type', 'real')
+    optimizableVariable('r_state_dkf1', [1.9, 2.5], 'Type', 'real')
+    optimizableVariable('r_param_dkf1', [18,19], 'Type', 'real')
     
     ];
 
@@ -679,8 +679,8 @@ ObjFcn_ekf = @(p) run_ekf_internal(p, Mgm, Kgk_undamaged, Cgc, Kd, Phi_mat, Fgf,
 
 %% for PSO 
 psoOptions = optimoptions('particleswarm', ...
-    'SwarmSize', 40, ...          % 30 particles flying at once
-    'MaxIterations', 30, ...      % 30 * 20 = 600 total evaluations, but much faster due to parallelization
+    'SwarmSize', 10, ...          % 30 particles flying at once
+    'MaxIterations', 10, ...      % 30 * 20 = 600 total evaluations, but much faster due to parallelization
     'Display', 'iter', ...
     'UseParallel', false);         % CRITICAL: Evaluates multiple particles simultaneously on your CPU cores
 
